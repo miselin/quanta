@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "atom.h"
+#include "primitive.h"
 
 struct environment {
   GHashTable *bindings;
@@ -13,7 +14,7 @@ struct environment {
 
 struct environment *create_default_environment(void) {
   struct environment *env = create_environment(NULL);
-  // TODO: set default symbols and values
+  init_primitives(env);
   return env;
 }
 
@@ -60,5 +61,5 @@ void env_bind(struct environment *env, struct atom *symbol, struct atom *value) 
 
   // key is an interned string, value is the real atom value
   // the binding should not outlive the atom
-  g_hash_table_insert(env->bindings, symbol->value.string.ptr, value);
+  g_hash_table_insert(env->bindings, g_strdup(symbol->value.string.ptr), value);
 }

@@ -18,6 +18,6 @@ set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -O2 -g")
 add_compile_options(-fsanitize=address)
 add_link_options(-fsanitize=address)
 
-add_executable(mattlisp main.c atom.c read.c intern.c print.c eval.c env.c)
+add_executable(mattlisp main.c atom.c read.c intern.c print.c eval.c env.c primitive.c)
 target_link_libraries(mattlisp PkgConfig::deps)
 

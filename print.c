@@ -14,8 +14,8 @@ static void print_list(struct atom *atom) {
 
   printf("(");
   while (atom && atom->type == ATOM_TYPE_CONS) {
-    print(atom->value.cons->car);
-    atom = atom->value.cons->cdr;
+    print(atom->value.cons.car);
+    atom = atom->value.cons.cdr;
     if (atom && atom->type == ATOM_TYPE_CONS) {
       printf(" ");
     }

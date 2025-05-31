@@ -162,14 +162,13 @@ static struct atom *read_list(FILE *fp) {
 
     struct atom *cons = calloc(1, sizeof(struct atom));
     cons->type = ATOM_TYPE_CONS;
-    cons->value.cons = calloc(1, sizeof(struct cons));
-    cons->value.cons->car = atom;  // the atom is the car of the cons cell
-    cons->value.cons->cdr = NULL;  // initially cdr is NULL
+    cons->value.cons.car = atom;  // the atom is the car of the cons cell
+    cons->value.cons.cdr = NULL;  // initially cdr is NULL
 
     if (!head) {
       head = cons;  // first cons cell becomes the head of the list
     } else {
-      prev->value.cons->cdr = cons;  // link the previous cons cell to the new one
+      prev->value.cons.cdr = cons;  // link the previous cons cell to the new one
     }
 
     prev = cons;  // update the previous pointer to the current cons cell

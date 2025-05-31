@@ -12,10 +12,8 @@ void free_atom(struct atom *atom) {
       free(atom->value.string.ptr);
       break;
     case ATOM_TYPE_CONS: {
-      struct cons *cons = atom->value.cons;
-      free_atom(cons->car);
-      free_atom(cons->cdr);
-      free(cons);
+      free_atom(atom->value.cons.car);
+      free_atom(atom->value.cons.cdr);
       break;
     }
     case ATOM_TYPE_SYMBOL:
