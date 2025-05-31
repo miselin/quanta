@@ -17,6 +17,7 @@ enum AtomType {
   ATOM_TYPE_TRUE = 7,       // t (nil is false)
   ATOM_TYPE_PRIMITIVE = 8,  // primitive functions
   ATOM_TYPE_SPECIAL = 9,    // special forms (e.g. if, define)
+  ATOM_TYPE_LAMBDA = 10,    // user-defined functions
 };
 
 typedef struct atom *(*PrimitiveFunction)(struct atom *args, struct environment *env);
@@ -37,6 +38,11 @@ struct atom {
     } string;
     struct cons cons;
     PrimitiveFunction primitive;
+    struct {
+      struct atom *args;
+      struct environment *env;
+      struct atom *body;
+    } lambda;
   } value;
 };
 
@@ -46,5 +52,8 @@ static inline int is_primitive_type(enum AtomType type) {
   return type == ATOM_TYPE_INT || type == ATOM_TYPE_FLOAT || type == ATOM_TYPE_STRING ||
          type == ATOM_TYPE_NIL || type == ATOM_TYPE_TRUE;
 }
+
+struct atom *car(struct atom *atom);
+struct atom *cdr(struct atom *atom);
 
 #endif  // _MATTLISP_ATOM_H

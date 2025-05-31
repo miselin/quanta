@@ -42,11 +42,6 @@ int main(void) {
 
     print(evaled);
     printf("\n");
-
-    if (evaled != atom) {
-      free_atom(evaled);  // Free the evaluated atom if it's different
-    }
-    free_atom(atom);  // Free the atom after printing
   }
 
   fflush(stdout);

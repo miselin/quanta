@@ -5,6 +5,7 @@
 
 #include "atom.h"
 #include "primitive.h"
+#include "special.h"
 
 struct environment {
   GHashTable *bindings;
@@ -15,6 +16,7 @@ struct environment {
 struct environment *create_default_environment(void) {
   struct environment *env = create_environment(NULL);
   init_primitives(env);
+  init_special_forms(env);
   return env;
 }
 
@@ -25,6 +27,24 @@ struct environment *create_environment(struct environment *parent) {
   env->parent = parent;
 
   return env;
+}
+
+struct environment *clone_environment(struct environment *env) {
+  if (!env) {
+    return NULL;  // nothing to clone
+  }
+
+  struct environment *new_env = create_environment(env->parent);
+
+  // Copy bindings from the old environment
+  GHashTableIter iter;
+  gpointer key, value;
+  g_hash_table_iter_init(&iter, env->bindings);
+  while (g_hash_table_iter_next(&iter, &key, &value)) {
+    g_hash_table_insert(new_env->bindings, g_strdup(key), value);  // copy key and value
+  }
+
+  return new_env;
 }
 
 void free_environment(struct environment *env) {

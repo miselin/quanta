@@ -14,6 +14,28 @@ static struct atom *primitive_function(PrimitiveFunction func) {
   return atom;
 }
 
+struct atom *primitive_car(struct atom *args, struct environment *env) {
+  (void)env;
+
+  if (!args) {
+    fprintf(stderr, "Error: 'car' requires a non-empty list\n");
+    return NULL;  // error handling
+  }
+
+  return car(args);
+}
+
+struct atom *primitive_cdr(struct atom *args, struct environment *env) {
+  (void)env;
+
+  if (!args) {
+    fprintf(stderr, "Error: 'cdr' requires a non-empty list\n");
+    return NULL;  // error handling
+  }
+
+  return cdr(args);
+}
+
 struct atom *primitive_add(struct atom *args, struct environment *env) {
   (void)env;
 
@@ -28,7 +50,7 @@ struct atom *primitive_add(struct atom *args, struct environment *env) {
 
   struct atom *current = args;
   while (current && current->type == ATOM_TYPE_CONS) {
-    struct atom *arg = current->value.cons.car;
+    struct atom *arg = car(current);
     if (arg->type == ATOM_TYPE_INT) {
       result->value.ivalue += arg->value.ivalue;  // Add integer values
     } else if (arg->type == ATOM_TYPE_FLOAT) {
@@ -39,7 +61,7 @@ struct atom *primitive_add(struct atom *args, struct environment *env) {
       free_atom(result);
       return NULL;  // error handling
     }
-    current = current->value.cons.cdr;
+    current = cdr(current);
   }
 
   if (current && current->type != ATOM_TYPE_NIL) {
@@ -190,6 +212,10 @@ struct atom *primitive_equal(struct atom *args, struct environment *env) {
       // For cons cells, we can only check if they are the same object
       result->type = (first == second ? ATOM_TYPE_TRUE : ATOM_TYPE_NIL);
       break;
+    case ATOM_TYPE_LAMBDA:
+      // For user-defined functions, we can only check if they are the same object
+      result->type = (first == second ? ATOM_TYPE_TRUE : ATOM_TYPE_NIL);
+      break;
   }
 
   return result;
@@ -221,7 +247,7 @@ void init_primitives(struct environment *env) {
   env_bind(env, intern(">=", 0), primitive_function(primitive_greater_than_equal));
 
   env_bind(env, intern("cons", 0), primitive_function(primitive_cons));
+  */
   env_bind(env, intern("car", 0), primitive_function(primitive_car));
   env_bind(env, intern("cdr", 0), primitive_function(primitive_cdr));
-  */
 }

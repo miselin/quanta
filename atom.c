@@ -1,5 +1,6 @@
 #include "atom.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 void free_atom(struct atom *atom) {
@@ -26,4 +27,34 @@ void free_atom(struct atom *atom) {
   }
 
   free(atom);
+}
+
+struct atom *car(struct atom *atom) {
+  if (atom->type != ATOM_TYPE_CONS) {
+    fprintf(stderr, "Error: 'car' requires a non-empty list\n");
+    return NULL;  // error handling
+  }
+
+  struct atom *result = atom->value.cons.car;
+  if (!result) {
+    fprintf(stderr, "Error: 'car' called on an empty list\n");
+    return NULL;  // error handling
+  }
+
+  return result;
+}
+
+struct atom *cdr(struct atom *atom) {
+  if (atom->type != ATOM_TYPE_CONS) {
+    fprintf(stderr, "Error: 'cdr' requires a non-empty list\n");
+    return NULL;  // error handling
+  }
+
+  struct atom *result = atom->value.cons.cdr;
+  if (!result) {
+    fprintf(stderr, "Error: 'cdr' called on an empty list\n");
+    return NULL;  // error handling
+  }
+
+  return result;
 }

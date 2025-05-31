@@ -30,7 +30,7 @@ struct atom *eval(struct atom *atom, struct environment *env) {
     struct atom *cdr = atom->value.cons.cdr;
 
     struct atom *fn = eval(car, env);
-    struct atom *args = car->type == ATOM_TYPE_SPECIAL ? cdr : eval_list(cdr, env);
+    struct atom *args = fn->type == ATOM_TYPE_SPECIAL ? cdr : eval_list(cdr, env);
     if (!fn || !args) {
       fprintf(stderr, "Error: invalid function or arguments\n");
       return NULL;
@@ -91,20 +91,68 @@ static struct atom *eval_list(struct atom *atom, struct environment *env) {
 }
 
 struct atom *apply(struct atom *fn, struct atom *args, struct environment *env) {
-  if (fn->type != ATOM_TYPE_PRIMITIVE) {
-    env = create_environment(env);  // create a new environment for function application
+  struct environment *parent = env;
+  if (fn->type == ATOM_TYPE_LAMBDA) {
+    // Use closure's environment from time of definition as parent in this case
+    parent = fn->value.lambda.env;
+  }
+
+  if (fn->type != ATOM_TYPE_PRIMITIVE && fn->type != ATOM_TYPE_SPECIAL) {
+    env = create_environment(parent);  // create a new environment for function application
   }
 
   struct atom *result = NULL;
-  if (fn->type == ATOM_TYPE_PRIMITIVE) {
-    // Call the primitive function
+  if (fn->type == ATOM_TYPE_PRIMITIVE || fn->type == ATOM_TYPE_SPECIAL) {
+    // Call the internal function
     result = fn->value.primitive(args, env);
+  } else if (fn->type == ATOM_TYPE_LAMBDA) {
+    // bind arguments to the function's parameters
+    struct atom *params = fn->value.lambda.args;
+    struct atom *current_args = args;
+    while (params && params->type == ATOM_TYPE_CONS) {
+      if (!current_args || current_args->type != ATOM_TYPE_CONS) {
+        fprintf(stderr, "Error: not enough arguments for lambda function\n");
+        free_environment(env);
+        return NULL;
+      }
+
+      struct atom *param = params->value.cons.car;
+      struct atom *arg = current_args->value.cons.car;
+
+      if (param->type != ATOM_TYPE_SYMBOL) {
+        fprintf(stderr, "Error: lambda parameter must be a symbol\n");
+        free_environment(env);
+        return NULL;
+      }
+
+      env_bind(env, param, eval(arg, parent));  // bind the argument to the parameter
+      params = params->value.cons.cdr;
+      current_args = current_args->value.cons.cdr;
+    }
+    if (params && params->type != ATOM_TYPE_NIL) {
+      fprintf(stderr, "Error: too many arguments for lambda function\n");
+      free_environment(env);
+      return NULL;
+    }
+    if (current_args && current_args->type != ATOM_TYPE_NIL) {
+      fprintf(stderr, "Error: not enough parameters for lambda function\n");
+      free_environment(env);
+      return NULL;
+    }
+
+    // Now evaluate the body of the lambda function
+    result = eval(fn->value.lambda.body, env);
+    if (!result) {
+      fprintf(stderr, "Error evaluating lambda body\n");
+      free_environment(env);
+      return NULL;
+    }
   } else {
-    // TODO
-    fprintf(stderr, "Error: non-primitive function application not implemented\n");
+    fprintf(stderr, "Error: unexpected type in apply\n");
+    return NULL;
   }
 
-  if (fn->type != ATOM_TYPE_PRIMITIVE) {
+  if (fn->type != ATOM_TYPE_PRIMITIVE && fn->type != ATOM_TYPE_SPECIAL) {
     free_environment(env);
   }
 
