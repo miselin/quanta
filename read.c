@@ -51,8 +51,6 @@ struct atom *read_atom(FILE *fp) {
     return NULL;  // empty atom
   }
 
-  fprintf(stderr, "atom buffer: %s (index=%zd)\n", buffer, index);
-
   if (c != EOF) {
     ungetc(c, fp);  // put back the last character
   }
@@ -66,7 +64,6 @@ struct atom *read_atom(FILE *fp) {
     atom->type = ATOM_TYPE_STRING;
     atom->value.string.ptr = strdup(buffer + 1);  // skip the opening quote
     atom->value.string.len = strlen(atom->value.string.ptr);
-    fprintf(stderr, "read string: %s\n", atom->value.string.ptr);
     return atom;
   }
 
@@ -77,12 +74,10 @@ struct atom *read_atom(FILE *fp) {
       // float
       atom->type = ATOM_TYPE_FLOAT;
       atom->value.fvalue = strtod(buffer, &endptr);
-      fprintf(stderr, "read float: %f\n", atom->value.fvalue);
     } else {
       // integer
       atom->type = ATOM_TYPE_INT;
       atom->value.ivalue = strtoll(buffer, &endptr, 10);
-      fprintf(stderr, "read integer: %ld\n", atom->value.ivalue);
     }
     return atom;
   }
@@ -90,14 +85,12 @@ struct atom *read_atom(FILE *fp) {
   if (!strcmp(buffer, "nil") || !strcmp(buffer, "f")) {
     // nil
     atom->type = ATOM_TYPE_NIL;
-    fprintf(stderr, "read nil\n");
     return atom;
   }
 
   if (strcmp(buffer, "t") == 0) {
     // true
     atom->type = ATOM_TYPE_TRUE;
-    fprintf(stderr, "read true\n");
     return atom;
   }
 
@@ -105,8 +98,6 @@ struct atom *read_atom(FILE *fp) {
   free(atom);
 
   atom = intern(buffer, buffer[0] == ':');
-  fprintf(stderr, "read & intern %s: %s [%p]\n", buffer[0] == ':' ? "keyword" : "symbol",
-          atom->value.string.ptr, (void *)atom);
   return atom;
 }
 
@@ -116,8 +107,6 @@ static struct atom *read_list(FILE *fp) {
     fprintf(stderr, "Error: expected '(', got '%c'\n", c);
     return NULL;  // error reading list
   }
-
-  fprintf(stderr, "reading list...\n");
 
   consume_whitespace(fp);
   c = fgetc(fp);
@@ -135,8 +124,6 @@ static struct atom *read_list(FILE *fp) {
   }
 
   ungetc(c, fp);  // put back the last character
-
-  fprintf(stderr, "reading car...\n");
 
   struct atom *head = NULL;
   struct atom *prev = NULL;

@@ -35,8 +35,6 @@ void print(struct atom *atom) {
     return;
   }
 
-  fprintf(stderr, "print: atom type %d\n", atom->type);
-
   switch (atom->type) {
     case ATOM_TYPE_INT:
       printf("%ld", atom->value.ivalue);

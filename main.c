@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "atom.h"
 #include "env.h"
@@ -16,8 +17,15 @@ int main(void) {
   struct environment *env = create_default_environment();
 
   while (1) {
-    printf("mattlisp> ");
-    fflush(stdout);
+    if (isatty(STDIN_FILENO)) {
+      printf("mattlisp> ");
+      fflush(stdout);
+    }
+
+    if (feof(stdin)) {
+      printf("End of input.\n");
+      break;  // Exit on EOF
+    }
 
     struct atom *atom = read_atom(stdin);
     if (!atom) {
