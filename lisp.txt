@@ -15,12 +15,9 @@ and program syntax-wise:
 and read syntax-wise:
 - [ ] objects have a printed notation that the machine understands and also reproduces;
 - [x] symbols are represented by identifier tokens, and are interned, so that two or more occurrences denote the same object;
-- [ ] conses are represented as the dotted notation (<car> . <cdr>);
-- [ ] (<car> . nil) can be condensed to (<car>);
-- [ ] (<car0> . (<car1> ...)) can be condensed to (<car0> <car1> ...) and usually is, including by the printer.
+- [x] conses are represented as the dotted notation (<car> . <cdr>);
+- [x] (<car> . nil) can be condensed to (<car>);
+- [x] (<car0> . (<car1> ...)) can be condensed to (<car0> <car1> ...) and usually is, including by the printer.
 
 furhermore, certain library functions and operators are present:
 - [x] lambda, eval, let, defun or define and various others.
-
-
-

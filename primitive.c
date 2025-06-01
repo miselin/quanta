@@ -14,6 +14,51 @@ static struct atom *primitive_function(PrimitiveFunction func) {
   return new_atom(ATOM_TYPE_PRIMITIVE, value);
 }
 
+typedef int64_t (*IArithmeticFunction)(int64_t, int64_t);
+typedef double (*FArithmeticFunction)(double, double);
+
+typedef int (*ComparisonFunction)(struct atom *, struct atom *);
+
+static int64_t iadd(int64_t a, int64_t b) {
+  return a + b;
+}
+
+static int64_t isub(int64_t a, int64_t b) {
+  return a - b;
+}
+
+static int64_t imul(int64_t a, int64_t b) {
+  return a * b;
+}
+
+static int64_t idiv(int64_t a, int64_t b) {
+  if (b == 0) {
+    fprintf(stderr, "Error: division by zero\n");
+    return 0;
+  }
+  return a / b;
+}
+
+static double fadd(double a, double b) {
+  return a + b;
+}
+
+static double fsub(double a, double b) {
+  return a - b;
+}
+
+static double fmul(double a, double b) {
+  return a * b;
+}
+
+static double fdiv(double a, double b) {
+  if (b == 0.0) {
+    fprintf(stderr, "Error: division by zero\n");
+    return 0.0;
+  }
+  return a / b;
+}
+
 struct atom *primitive_cons(struct atom *args, struct environment *env) {
   (void)env;
 
@@ -46,115 +91,123 @@ struct atom *primitive_cdr(struct atom *args, struct environment *env) {
   return cdr(args);
 }
 
-struct atom *primitive_add(struct atom *args, struct environment *env) {
-  (void)env;
-
-  if (!args || args->type != ATOM_TYPE_CONS) {
-    fprintf(stderr, "Error: '+' requires at least one argument\n");
-    return NULL;
-  }
-
-  union atom_value value = {.ivalue = 0};
-
-  // get first argument to determine the result type of the expression
+int check_arithmetic_args(struct atom *args) {
   struct atom *first_arg = car(args);
   enum AtomType type = first_arg->type;
 
-  if (type == ATOM_TYPE_INT) {
-    value.ivalue = first_arg->value.ivalue;
-  } else if (type == ATOM_TYPE_FLOAT) {
-    value.fvalue = first_arg->value.fvalue;
-    type = ATOM_TYPE_FLOAT;
+  args = cdr(args);
+  while (args && args->type == ATOM_TYPE_CONS) {
+    struct atom *arg = car(args);
+    if (arg->type != type) {
+      fprintf(stderr,
+              "Error: arithmetic operations require all arguments to be of the same type\n");
+      return 0;
+    } else if (arg->type != ATOM_TYPE_INT && arg->type != ATOM_TYPE_FLOAT) {
+      fprintf(stderr, "Error: arithmetic operations only support integers and floats\n");
+      return 0;
+    }
+    args = cdr(args);
+  }
+
+  return 1;
+}
+
+struct atom *iarithmetic(struct atom *args, IArithmeticFunction func) {
+  struct atom *first_arg = car(args);
+  int64_t value = first_arg->value.ivalue;
+
+  args = cdr(args);
+  while (args) {
+    struct atom *arg = car(args);
+    value = func(value, arg->value.ivalue);
+    args = cdr(args);
+  }
+
+  union atom_value result_value = {.ivalue = value};
+  return new_atom(ATOM_TYPE_INT, result_value);
+}
+
+struct atom *farithmetic(struct atom *args, FArithmeticFunction func) {
+  struct atom *first_arg = car(args);
+  double value = first_arg->value.ivalue;
+
+  args = cdr(args);
+  while (args) {
+    struct atom *arg = car(args);
+    value = func(value, arg->value.ivalue);
+    args = cdr(args);
+  }
+
+  union atom_value result_value = {.ivalue = value};
+  return new_atom(ATOM_TYPE_FLOAT, result_value);
+}
+
+struct atom *primitive_add(struct atom *args, struct environment *env) {
+  (void)env;
+
+  if (!check_arithmetic_args(args)) {
+    return NULL;
+  }
+
+  if (car(args)->type == ATOM_TYPE_INT) {
+    return iarithmetic(args, iadd);
+  } else if (car(args)->type == ATOM_TYPE_FLOAT) {
+    return farithmetic(args, fadd);
   } else {
     fprintf(stderr, "Error: '+' only supports integers and floats\n");
     return NULL;
   }
-
-  // perform the arithmetic
-  while (args && args->type == ATOM_TYPE_CONS) {
-    struct atom *arg = car(args);
-    if (arg->type != type) {
-      fprintf(stderr, "Error: '+' requires all arguments to be of the same type\n");
-      return NULL;
-    } else if (arg->type == ATOM_TYPE_INT) {
-      value.ivalue += arg->value.ivalue;
-    } else if (arg->type == ATOM_TYPE_FLOAT) {
-      value.fvalue += arg->value.fvalue;
-    } else {
-      fprintf(stderr, "Error: '+' only supports integers and floats\n");
-      return NULL;
-    }
-
-    args = cdr(args);
-  }
-
-  return new_atom(type, value);
 }
 
 struct atom *primitive_subtract(struct atom *args, struct environment *env) {
-  (void)args;
   (void)env;
 
-  return atom_nil();
+  if (!check_arithmetic_args(args)) {
+    return NULL;
+  }
+
+  if (car(args)->type == ATOM_TYPE_INT) {
+    return iarithmetic(args, isub);
+  } else if (car(args)->type == ATOM_TYPE_FLOAT) {
+    return farithmetic(args, fsub);
+  } else {
+    fprintf(stderr, "Error: '-' only supports integers and floats\n");
+    return NULL;
+  }
 }
 
 struct atom *primitive_multiply(struct atom *args, struct environment *env) {
   (void)env;
 
-  if (!args || args->type != ATOM_TYPE_CONS) {
-    fprintf(stderr, "Error: '*' requires at least one argument\n");
+  if (!check_arithmetic_args(args)) {
     return NULL;
   }
 
-  union atom_value value = {.ivalue = 0};
-
-  // get first argument to determine the result type of the expression
-  struct atom *first_arg = car(args);
-  enum AtomType type = first_arg->type;
-
-  if (type == ATOM_TYPE_INT) {
-    value.ivalue = first_arg->value.ivalue;
-  } else if (type == ATOM_TYPE_FLOAT) {
-    value.fvalue = first_arg->value.fvalue;
-    type = ATOM_TYPE_FLOAT;
+  if (car(args)->type == ATOM_TYPE_INT) {
+    return iarithmetic(args, imul);
+  } else if (car(args)->type == ATOM_TYPE_FLOAT) {
+    return farithmetic(args, fmul);
   } else {
     fprintf(stderr, "Error: '*' only supports integers and floats\n");
     return NULL;
   }
-
-  args = cdr(args);
-  if (!args || args->type != ATOM_TYPE_CONS) {
-    // If there's only one argument, return it as the result
-    return atom_ref(first_arg);
-  }
-
-  // perform the arithmetic
-  while (args && args->type == ATOM_TYPE_CONS) {
-    struct atom *arg = car(args);
-    if (arg->type != type) {
-      fprintf(stderr, "Error: '*' requires all arguments to be of the same type\n");
-      return NULL;
-    } else if (arg->type == ATOM_TYPE_INT) {
-      value.ivalue *= arg->value.ivalue;
-    } else if (arg->type == ATOM_TYPE_FLOAT) {
-      value.fvalue *= arg->value.fvalue;
-    } else {
-      fprintf(stderr, "Error: '*' only supports integers and floats\n");
-      return NULL;
-    }
-
-    args = cdr(args);
-  }
-
-  return new_atom(type, value);
 }
 
 struct atom *primitive_divide(struct atom *args, struct environment *env) {
-  (void)args;
   (void)env;
 
-  fprintf(stderr, "divide not implemented yet\n");
-  return atom_nil();
+  if (!check_arithmetic_args(args)) {
+    return NULL;
+  }
+
+  if (car(args)->type == ATOM_TYPE_INT) {
+    return iarithmetic(args, idiv);
+  } else if (car(args)->type == ATOM_TYPE_FLOAT) {
+    return farithmetic(args, fdiv);
+  } else {
+    fprintf(stderr, "Error: '/' only supports integers and floats\n");
+    return NULL;
+  }
 }
 
 struct atom *primitive_equal(struct atom *args, struct environment *env) {
@@ -277,25 +330,13 @@ void init_primitives(struct environment *env) {
   env_bind_noref(env, intern_noref("-", 0), primitive_function(primitive_subtract));
   env_bind_noref(env, intern_noref("*", 0), primitive_function(primitive_multiply));
   env_bind_noref(env, intern_noref("/", 0), primitive_function(primitive_divide));
-
   env_bind_noref(env, intern_noref("eq?", 0), primitive_function(primitive_equal));
-  /*
-  env_bind_noref(env, intern_noref("!=", 0), primitive_function(primitive_not_equal));
-  env_bind_noref(env, intern_noref("<", 0), primitive_function(primitive_less_than));
-  env_bind_noref(env, intern_noref(">", 0), primitive_function(primitive_greater_than));
-  env_bind_noref(env, intern_noref("<=", 0), primitive_function(primitive_less_than_equal));
-  env_bind_noref(env, intern_noref(">=", 0), primitive_function(primitive_greater_than_equal));
-  */
-
   env_bind_noref(env, intern_noref("cons", 0), primitive_function(primitive_cons));
   env_bind_noref(env, intern_noref("car", 0), primitive_function(primitive_car));
   env_bind_noref(env, intern_noref("cdr", 0), primitive_function(primitive_cdr));
-
   env_bind_noref(env, intern_noref("atom?", 0), primitive_function(primitive_atomp));
   env_bind_noref(env, intern_noref("nil?", 0), primitive_function(primitive_nilp));
-
   env_bind_noref(env, intern_noref("apply", 0), primitive_function(primitive_apply));
   env_bind_noref(env, intern_noref("eval", 0), primitive_function(primitive_eval));
-
   env_bind_noref(env, intern_noref("print", 0), primitive_function(primitive_print));
 }
