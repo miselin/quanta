@@ -12,6 +12,13 @@ static struct atom *read_list(FILE *fp);
 
 static void consume_whitespace(FILE *fp) {
   char c = fgetc(fp);
+  if (c == ';') {
+    // skip comments
+    while (c != EOF && c != '\n') {
+      c = fgetc(fp);
+    }
+  }
+
   while (c != EOF && isspace(c)) {
     c = fgetc(fp);
   }
@@ -52,7 +59,7 @@ struct atom *read_atom(FILE *fp) {
   // read the atom string
   char buffer[256];
   size_t buffer_length = 0;
-  while (c != EOF && !isspace(c) && c != '(' && c != ')') {
+  while (c != EOF && !isspace(c) && c != '(' && c != ')' && c != ';') {
     if (buffer_length < sizeof(buffer) - 1) {
       buffer[buffer_length++] = c;
     }

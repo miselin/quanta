@@ -21,3 +21,28 @@ and read syntax-wise:
 
 furhermore, certain library functions and operators are present:
 - [x] lambda, eval, let, defun or define and various others.
+
+
+-----
+
+Special forms
+- quote (+ ' sugar)
+- lambda
+- begin
+- define
+- defun
+- set!
+- let
+- cond
+
+Primitives
+- +, -, /, *
+- eq?
+- cons
+- car
+- cdr
+- atom?
+- nil?
+- apply
+- eval
+- print
