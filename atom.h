@@ -1,6 +1,7 @@
 #ifndef _MATTLISP_ATOM_H
 #define _MATTLISP_ATOM_H
 
+#include <glib-2.0/glib.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -27,33 +28,49 @@ struct cons {
   struct atom *cdr;
 };
 
-struct atom {
-  enum AtomType type;
-  union {
-    int64_t ivalue;
-    double fvalue;
-    struct {
-      char *ptr;
-      size_t len;
-    } string;
-    struct cons cons;
-    PrimitiveFunction primitive;
-    struct {
-      struct atom *args;
-      struct environment *env;
-      struct atom *body;
-    } lambda;
-  } value;
+union atom_value {
+  int64_t ivalue;
+  double fvalue;
+  struct {
+    char *ptr;
+    size_t len;
+  } string;
+  struct cons cons;
+  PrimitiveFunction primitive;
+  struct {
+    struct atom *args;
+    struct environment *env;
+    struct atom *body;
+  } lambda;
 };
 
-void free_atom(struct atom *atom);
+struct atom {
+  enum AtomType type;
+  union atom_value value;
+  gatomicrefcount ref_count;
+};
 
-static inline int is_primitive_type(enum AtomType type) {
-  return type == ATOM_TYPE_INT || type == ATOM_TYPE_FLOAT || type == ATOM_TYPE_STRING ||
-         type == ATOM_TYPE_NIL || type == ATOM_TYPE_TRUE;
-}
+struct atom *atom_nil(void);
+struct atom *atom_true(void);
+
+struct atom *new_atom(enum AtomType type, union atom_value value);
+
+struct atom *atom_ref(struct atom *atom);
+void atom_deref(struct atom *atom);
+
+struct atom *new_cons(struct atom *car, struct atom *cdr);
 
 struct atom *car(struct atom *atom);
 struct atom *cdr(struct atom *atom);
+
+int is_cons(struct atom *atom);
+int is_nil(struct atom *atom);
+int is_symbol(struct atom *atom);
+int is_keyword(struct atom *atom);
+int is_string(struct atom *atom);
+int is_int(struct atom *atom);
+int is_float(struct atom *atom);
+int is_true(struct atom *atom);
+int is_basic_type(struct atom *atom);
 
 #endif  // _MATTLISP_ATOM_H

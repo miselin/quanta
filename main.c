@@ -15,6 +15,7 @@ int main(void) {
   init_intern_tables();
 
   struct environment *env = create_default_environment();
+  // fprintf(stderr, "repl: using environment %p\n", (void *)env);
 
   while (1) {
     if (isatty(STDIN_FILENO)) {
@@ -34,19 +35,22 @@ int main(void) {
     }
 
     struct atom *evaled = eval(atom, env);
+    atom_deref(atom);
+
     if (!evaled) {
       printf("Error evaluating atom.\n");
-      free(atom);
       continue;
     }
 
     print(evaled);
     printf("\n");
+
+    atom_deref(evaled);
   }
 
   fflush(stdout);
 
-  free_environment(env);
+  deref_environment(env);
 
   cleanup_intern_tables();
   return 0;

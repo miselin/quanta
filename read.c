@@ -7,6 +7,7 @@
 
 #include "atom.h"
 #include "intern.h"
+#include "print.h"
 
 static struct atom *read_list(FILE *fp);
 
@@ -36,18 +37,32 @@ struct atom *read_atom(FILE *fp) {
     return read_list(fp);
   }
 
+  // handle certain syntactic sugars
+  if (c == '\'') {
+    // it's actually (quote atom)
+    struct atom *atom = read_atom(fp);
+    if (!atom) {
+      fprintf(stderr, "Error: expected atom after '\n");
+      return NULL;  // error reading atom
+    }
+
+    struct atom *quote_atom = intern("quote", 0);
+    return new_cons(quote_atom, new_cons(atom, atom_nil()));
+  }
+
   // read the atom string
   char buffer[256];
-  size_t index = 0;
+  size_t buffer_length = 0;
   while (c != EOF && !isspace(c) && c != '(' && c != ')') {
-    if (index < sizeof(buffer) - 1) {
-      buffer[index++] = c;
+    if (buffer_length < sizeof(buffer) - 1) {
+      buffer[buffer_length++] = c;
     }
     c = fgetc(fp);
   }
-  buffer[index] = '\0';  // null-terminate the string
+  buffer[buffer_length] = '\0';  // null-terminate the string
 
-  if (!index) {
+  if (!buffer_length) {
+    fprintf(stderr, "Error: empty atom read\n");
     return NULL;  // empty atom
   }
 
@@ -55,50 +70,90 @@ struct atom *read_atom(FILE *fp) {
     ungetc(c, fp);  // put back the last character
   }
 
-  struct atom *atom = calloc(1, sizeof(struct atom));
-
-  // what have we read?
-  if (buffer[0] == '"') {
-    // string literal
-    // TODO: check for correct string termination, handle escaping, etc
-    atom->type = ATOM_TYPE_STRING;
-    atom->value.string.ptr = strdup(buffer + 1);  // skip the opening quote
-    atom->value.string.len = strlen(atom->value.string.ptr);
-    return atom;
-  }
-
-  if (isdigit(buffer[0]) || (buffer[0] == '-' && isdigit(buffer[1]))) {
-    // integer or float
-    char *endptr;
-    if (strchr(buffer, '.')) {
-      // float
-      atom->type = ATOM_TYPE_FLOAT;
-      atom->value.fvalue = strtod(buffer, &endptr);
-    } else {
-      // integer
-      atom->type = ATOM_TYPE_INT;
-      atom->value.ivalue = strtoll(buffer, &endptr, 10);
-    }
-    return atom;
-  }
-
   if (!strcmp(buffer, "nil") || !strcmp(buffer, "f")) {
     // nil
-    atom->type = ATOM_TYPE_NIL;
-    return atom;
+    return atom_nil();
   }
 
   if (strcmp(buffer, "t") == 0) {
     // true
-    atom->type = ATOM_TYPE_TRUE;
-    return atom;
+    return atom_true();
   }
 
-  // keyword or symbol
-  free(atom);
+  // what have we read?
+  if (buffer[0] == '"') {
+    // search for closing quote
+    size_t last = buffer_length - 1;
+    if (buffer[last] != '"') {
+      fprintf(stderr, "Error: string not terminated properly\n");
+      return NULL;  // error reading string
+    }
 
-  atom = intern(buffer, buffer[0] == ':');
-  return atom;
+    char *value_ptr = malloc(last);
+
+    // search for characters that require escaping
+    int is_escape = 0;
+    size_t at = 0;
+    for (size_t i = 1; i < last; i++) {
+      if (is_escape) {
+        is_escape = 0;
+
+        switch (buffer[i]) {
+          case 'n':
+            value_ptr[at++] = '\n';
+            break;
+          case 't':
+            value_ptr[at++] = '\t';
+            break;
+          case 'r':
+            value_ptr[at++] = '\r';
+            break;
+          case '"':
+            value_ptr[at++] = '"';
+            break;
+          case '\\':
+            value_ptr[at++] = '\\';
+            break;
+          default:
+            fprintf(stderr, "Error: unknown escape sequence '\\%c'\n", buffer[i]);
+            free(value_ptr);
+            return NULL;  // error reading string
+        }
+      } else if (buffer[i] == '\\') {
+        is_escape = 1;
+      } else if (buffer[i] == '"') {
+        fprintf(stderr, "Error: unexpected closing quote in string\n");
+        free(value_ptr);
+        return NULL;  // error reading string
+      } else {
+        value_ptr[at++] = buffer[i];
+      }
+    }
+
+    value_ptr[at] = '\0';  // null-terminate the string
+
+    union atom_value value = {.string = {.ptr = value_ptr, .len = at}};
+    return new_atom(ATOM_TYPE_STRING, value);
+  }
+
+  if (isdigit(buffer[0]) || (buffer[0] == '-' && isdigit(buffer[1]))) {
+    union atom_value value;
+
+    // integer or float
+    // TODO: need better parsing here
+    char *endptr;
+    if (strchr(buffer, '.')) {
+      // float
+      value.fvalue = strtod(buffer, &endptr);
+      return new_atom(ATOM_TYPE_FLOAT, value);
+    } else {
+      // integer
+      value.ivalue = strtoll(buffer, &endptr, 10);
+      return new_atom(ATOM_TYPE_INT, value);
+    }
+  }
+
+  return intern(buffer, buffer[0] == ':');
 }
 
 static struct atom *read_list(FILE *fp) {
@@ -112,10 +167,7 @@ static struct atom *read_list(FILE *fp) {
   c = fgetc(fp);
   if (c == ')') {
     // empty list
-    struct atom *nil_atom = calloc(1, sizeof(struct atom));
-    nil_atom->type = ATOM_TYPE_NIL;
-    fprintf(stderr, "read empty list\n");
-    return nil_atom;
+    return atom_nil();
   }
 
   if (c == EOF) {
@@ -128,6 +180,8 @@ static struct atom *read_list(FILE *fp) {
   struct atom *head = NULL;
   struct atom *prev = NULL;
 
+  int dotted = 0;
+
   while (1) {
     consume_whitespace(fp);
     c = fgetc(fp);
@@ -136,21 +190,48 @@ static struct atom *read_list(FILE *fp) {
     }
     if (c == EOF) {
       fprintf(stderr, "Error: unexpected end of file while reading list\n");
-      return NULL;  // error reading list
+      return NULL;
     }
 
-    ungetc(c, fp);  // put back the last character
+    if (c == '.') {
+      // TODO: handle invalid syntax like '(1 . 2 . 3)'
+      dotted = 1;
+    } else {
+      ungetc(c, fp);  // put back the character we read to check
+    }
 
     struct atom *atom = read_atom(fp);
     if (!atom) {
       fprintf(stderr, "Error reading atom in list\n");
-      return NULL;  // error reading atom
+      return NULL;
     }
 
-    struct atom *cons = calloc(1, sizeof(struct atom));
-    cons->type = ATOM_TYPE_CONS;
-    cons->value.cons.car = atom;  // the atom is the car of the cons cell
-    cons->value.cons.cdr = NULL;  // initially cdr is NULL
+    if (dotted) {
+      if (!prev) {
+        fprintf(stderr, "Error: cannot have dotted pair without a previous cons cell\n");
+        atom_deref(atom);
+        return NULL;
+      }
+
+      if (!is_nil(cdr(prev))) {
+        fprintf(stderr, "Error: cannot have more than one dotted pair in a list\n");
+        atom_deref(atom);
+        return NULL;
+      }
+
+      prev->value.cons.cdr = atom;
+
+      c = fgetc(fp);
+      if (c != ')') {
+        fprintf(stderr, "Error: expected ')', got '%c'\n", c);
+        atom_deref(atom);
+        return NULL;  // error reading list
+      }
+
+      break;
+    }
+
+    struct atom *cons = new_cons(atom, NULL);
 
     if (!head) {
       head = cons;  // first cons cell becomes the head of the list
@@ -162,8 +243,7 @@ static struct atom *read_list(FILE *fp) {
   }
 
   if (!head) {
-    head = calloc(1, sizeof(struct atom));
-    head->type = ATOM_TYPE_NIL;  // if we didn't read any atoms, return nil
+    head = atom_nil();
   }
 
   return head;

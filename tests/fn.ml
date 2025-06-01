@@ -1,2 +1,5 @@
 (defun sqr (x) (* x x))
-(sqr 2)
+(define squared (let ((x 2)) (sqr x)))
+(print squared)
+(cond ((eq? squared 4) 0)
+      (t 1))

@@ -1,16 +1,16 @@
 It's a Lisp if, semantics-wise:
 
 - [x] it divides objects into conses and atoms; conses have car and cdr slots;
-- [ ] functions of the same names exist to access these slots.
+- [x] functions of the same names exist to access these slots.
 - [x] has a symbol type distinct from string;
-- [ ] the empty list is the symbol nil and thus an atom.
+- [x] the empty list is the symbol nil and thus an atom.
 - [x] non-empty lists are created from conses, linked through car;
-- [ ] these data structures are not only manipulated by programs, but are combined to represent their syntax.
+- [x] these data structures are not only manipulated by programs, but are combined to represent their syntax.
 
 and program syntax-wise:
-- [ ] program is made of expressions, which are either atoms or lists
-- [ ] atoms that are symbols denote variables, except for self-evaluating symbols like t and nil.
-- [ ] lists are compound expressions denoting operator applications: the first element is a symbol denoting an operator, macro operator or function; the rest of the syntax is arguments
+- [x] program is made of expressions, which are either atoms or lists
+- [x] atoms that are symbols denote variables, except for self-evaluating symbols like t and nil.
+- [x] lists are compound expressions denoting operator applications: the first element is a symbol denoting an operator, macro operator or function; the rest of the syntax is arguments
 
 and read syntax-wise:
 - [ ] objects have a printed notation that the machine understands and also reproduces;
@@ -20,7 +20,7 @@ and read syntax-wise:
 - [ ] (<car0> . (<car1> ...)) can be condensed to (<car0> <car1> ...) and usually is, including by the printer.
 
 furhermore, certain library functions and operators are present:
-- [ ] lambda, eval, let, defun or define and various others.
+- [x] lambda, eval, let, defun or define and various others.
 
 
 
