@@ -8,45 +8,45 @@
 #include "atom.h"
 #include "intern.h"
 
-static struct atom *read_list(FILE *fp);
+static struct atom *read_list(struct source_file *source);
 
-static void consume_whitespace(FILE *fp) {
-  char c = fgetc(fp);
+static void consume_whitespace(struct source_file *source) {
+  char c = source_file_getc(source);
   if (c == ';') {
     // skip comments
     while (c != EOF && c != '\n') {
-      c = fgetc(fp);
+      c = source_file_getc(source);
     }
   }
 
   while (c != EOF && isspace(c)) {
-    c = fgetc(fp);
+    c = source_file_getc(source);
   }
 
   if (c != EOF) {
-    ungetc(c, fp);
+    source_file_ungetc(source, c);
   }
 }
 
-struct atom *read_atom(FILE *fp) {
+struct atom *read_atom(struct source_file *source) {
   // consume leading whitespace
-  consume_whitespace(fp);
+  consume_whitespace(source);
 
-  char c = fgetc(fp);
+  char c = source_file_getc(source);
   if (c == EOF) {
     return NULL;
   }
 
   if (c == '(') {
     // if we read a '(', we need to handle it as a list instead of an atom
-    ungetc(c, fp);  // put back the '('
-    return read_list(fp);
+    source_file_ungetc(source, c);  // put back the '('
+    return read_list(source);
   }
 
   // handle certain syntactic sugars
   if (c == '\'') {
     // it's actually (quote atom)
-    struct atom *atom = read_atom(fp);
+    struct atom *atom = read_atom(source);
     if (!atom) {
       fprintf(stderr, "Error: expected atom after '\n");
       return NULL;  // error reading atom
@@ -56,14 +56,35 @@ struct atom *read_atom(FILE *fp) {
     return new_cons(quote_atom, new_cons(atom, atom_nil()));
   }
 
+  int is_str = 0;
+  int is_escaped = 0;
+  if (c == '"') {
+    is_str = 2;
+  }
+
   // read the atom string
   char buffer[256];
   size_t buffer_length = 0;
-  while (c != EOF && !isspace(c) && c != '(' && c != ')' && c != ';') {
+  while (c != EOF) {
+    if (is_str > 0) {
+      if (c == '"' && !is_escaped) {
+        // end of string
+        --is_str;
+      }
+
+      if (c == '\\') {
+        is_escaped = 1;
+      }
+
+      // all characters are valid inside a string for now
+    } else if (isspace(c) || c == '(' || c == ')' || c == ';') {
+      break;
+    }
+
     if (buffer_length < sizeof(buffer) - 1) {
       buffer[buffer_length++] = c;
     }
-    c = fgetc(fp);
+    c = source_file_getc(source);
   }
   buffer[buffer_length] = '\0';  // null-terminate the string
 
@@ -72,8 +93,15 @@ struct atom *read_atom(FILE *fp) {
     return NULL;  // empty atom
   }
 
+  fprintf(stderr, "processing atom from '%s'\n", buffer);
+
+  if (is_str != 0) {
+    fprintf(stderr, "Error: string not terminated properly\n");
+    return NULL;
+  }
+
   if (c != EOF) {
-    ungetc(c, fp);  // put back the last character
+    source_file_ungetc(source, c);  // put back the last character
   }
 
   if (!strcmp(buffer, "nil") || !strcmp(buffer, "f")) {
@@ -162,15 +190,15 @@ struct atom *read_atom(FILE *fp) {
   return intern(buffer, buffer[0] == ':');
 }
 
-static struct atom *read_list(FILE *fp) {
-  char c = fgetc(fp);
+static struct atom *read_list(struct source_file *source) {
+  char c = source_file_getc(source);
   if (c != '(') {
     fprintf(stderr, "Error: expected '(', got '%c'\n", c);
     return NULL;  // error reading list
   }
 
-  consume_whitespace(fp);
-  c = fgetc(fp);
+  consume_whitespace(source);
+  c = source_file_getc(source);
   if (c == ')') {
     // empty list
     return atom_nil();
@@ -181,7 +209,7 @@ static struct atom *read_list(FILE *fp) {
     return NULL;  // error reading list
   }
 
-  ungetc(c, fp);  // put back the last character
+  source_file_ungetc(source, c);  // put back the last character
 
   struct atom *head = NULL;
   struct atom *prev = NULL;
@@ -189,8 +217,8 @@ static struct atom *read_list(FILE *fp) {
   int dotted = 0;
 
   while (1) {
-    consume_whitespace(fp);
-    c = fgetc(fp);
+    consume_whitespace(source);
+    c = source_file_getc(source);
     if (c == ')') {
       break;
     }
@@ -203,10 +231,10 @@ static struct atom *read_list(FILE *fp) {
       // TODO: handle invalid syntax like '(1 . 2 . 3)'
       dotted = 1;
     } else {
-      ungetc(c, fp);  // put back the character we read to check
+      source_file_ungetc(source, c);  // put back the character we read to check
     }
 
-    struct atom *atom = read_atom(fp);
+    struct atom *atom = read_atom(source);
     if (!atom) {
       fprintf(stderr, "Error reading atom in list\n");
       return NULL;
@@ -227,7 +255,7 @@ static struct atom *read_list(FILE *fp) {
 
       prev->value.cons.cdr = atom;
 
-      c = fgetc(fp);
+      c = source_file_getc(source);
       if (c != ')') {
         fprintf(stderr, "Error: expected ')', got '%c'\n", c);
         atom_deref(atom);

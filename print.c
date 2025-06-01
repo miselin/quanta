@@ -4,61 +4,59 @@
 
 #include "atom.h"
 
-void print(struct atom *atom);
-
-static void print_list(struct atom *atom) {
+static void print_list(FILE *fp, struct atom *atom) {
   if (atom->type != ATOM_TYPE_CONS) {
-    print(atom);
+    print(fp, atom);
     return;
   }
 
-  printf("(");
+  fprintf(fp, "(");
   while (atom && atom->type == ATOM_TYPE_CONS) {
-    print(atom->value.cons.car);
+    print(fp, atom->value.cons.car);
     atom = atom->value.cons.cdr;
     if (atom && atom->type == ATOM_TYPE_CONS) {
-      printf(" ");
+      fprintf(fp, " ");
     }
   }
 
   if (atom && atom->type != ATOM_TYPE_NIL) {
-    printf(" . ");
-    print(atom);
+    fprintf(fp, " . ");
+    print(fp, atom);
   }
 
-  printf(")");
+  fprintf(fp, ")");
 }
 
-void print(struct atom *atom) {
+void print(FILE *fp, struct atom *atom) {
   if (!atom) {
-    printf("nil");
+    fprintf(fp, "nil");
     return;
   }
 
   switch (atom->type) {
     case ATOM_TYPE_INT:
-      printf("%ld", atom->value.ivalue);
+      fprintf(fp, "%ld", atom->value.ivalue);
       break;
     case ATOM_TYPE_FLOAT:
-      printf("%f", atom->value.fvalue);
+      fprintf(fp, "%f", atom->value.fvalue);
       break;
     case ATOM_TYPE_STRING:
-      printf("\"%s\"", atom->value.string.ptr);
+      fprintf(fp, "\"%s\"", atom->value.string.ptr);
       break;
     case ATOM_TYPE_CONS:
-      print_list(atom);
+      print_list(fp, atom);
       break;
     case ATOM_TYPE_NIL:
-      printf("nil");
+      fprintf(fp, "nil");
       break;
     case ATOM_TYPE_SYMBOL:
-      printf("%s", atom->value.string.ptr);
+      fprintf(fp, "%s", atom->value.string.ptr);
       break;
     case ATOM_TYPE_KEYWORD:
-      printf("%s", atom->value.string.ptr);
+      fprintf(fp, "%s", atom->value.string.ptr);
       break;
     case ATOM_TYPE_TRUE:
-      printf("t");
+      fprintf(fp, "t");
       break;
     default:
       fprintf(stderr, "Unknown atom type: %d\n", atom->type);

@@ -10,25 +10,39 @@
 #include "intern.h"
 #include "print.h"
 #include "read.h"
+#include "source.h"
 
-int main(void) {
+int main(int argc, char *argv[]) {
   init_intern_tables();
+
+  struct source_file *source = NULL;
+  if (argc > 1) {
+    source = source_file_new(argv[1]);
+    if (!source) {
+      fprintf(stderr, "Error: could not open source file '%s'\n", argv[1]);
+      return 1;
+    }
+  } else {
+    source = source_file_stdin();
+  }
 
   struct environment *env = create_default_environment();
   // fprintf(stderr, "repl: using environment %p\n", (void *)env);
 
+  int is_interactive = isatty(STDIN_FILENO);
+
   while (1) {
-    if (isatty(STDIN_FILENO)) {
+    if (is_interactive) {
       printf("mattlisp> ");
       fflush(stdout);
     }
 
-    if (feof(stdin)) {
+    if (source_file_eof(source)) {
       printf("End of input.\n");
       break;  // Exit on EOF
     }
 
-    struct atom *atom = read_atom(stdin);
+    struct atom *atom = read_atom(source);
     if (!atom) {
       printf("End of input or error reading atom.\n");
       break;
@@ -42,11 +56,13 @@ int main(void) {
       continue;
     }
 
-    print(evaled);
+    print(stdout, evaled);
     printf("\n");
 
     atom_deref(evaled);
   }
+
+  source_file_free(source);
 
   fflush(stdout);
 

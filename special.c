@@ -7,7 +7,6 @@
 #include "atom.h"
 #include "eval.h"
 #include "intern.h"
-#include "print.h"
 
 static struct atom *special_form(PrimitiveFunction func) {
   union atom_value value = {.primitive = func};
@@ -34,7 +33,7 @@ struct atom *lambda(struct atom *args, struct environment *env) {
   }
 
   struct atom *params = car(args);
-  if (params->type != ATOM_TYPE_CONS) {
+  if (params != atom_nil() && params->type != ATOM_TYPE_CONS) {
     fprintf(stderr, "Error: 'lambda' first argument must be a list of parameters\n");
     return NULL;
   }
@@ -96,12 +95,20 @@ struct atom *special_form_define(struct atom *args, struct environment *env) {
     atom_deref(existing);
   }
 
+  // Ensure
+  env_bind(env, name, atom_nil());
+
   struct atom *value_evaled = eval(value, env);
   if (!value_evaled) {
     fprintf(stderr, "Error: 'define' failed to evaluate value\n");
     return NULL;
   }
 
+  if (value_evaled->type == ATOM_TYPE_LAMBDA) {
+    env_bind(value_evaled->value.lambda.env, name, value_evaled);
+  }
+
+  // Overwrite the nil binding with the eventual value
   env_bind(env, name, value_evaled);
   atom_deref(value_evaled);
 

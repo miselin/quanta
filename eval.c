@@ -5,10 +5,16 @@
 
 #include "atom.h"
 #include "env.h"
+#include "eval.h"
+#include "print.h"
 
 static struct atom *eval_list(struct atom *list, struct environment *env);
 
 struct atom *eval(struct atom *atom, struct environment *env) {
+  fprintf(stderr, "eval: ");
+  print(stderr, atom);
+  fprintf(stderr, "\n");
+
   if (!atom || is_basic_type(atom)) {
     return atom_ref(atom);
   }

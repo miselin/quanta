@@ -9,6 +9,7 @@
 #include "intern.h"
 #include "print.h"
 #include "read.h"
+#include "source.h"
 
 static struct atom *primitive_function(PrimitiveFunction func) {
   union atom_value value = {.primitive = func};
@@ -299,7 +300,8 @@ struct atom *primitive_apply(struct atom *args, struct environment *env) {
 struct atom *primitive_eval(struct atom *args, struct environment *env) {
   (void)env;
 
-  return eval(args, env);
+  // TODO: car() here is probably not completely right
+  return eval(car(args), env);
 }
 
 struct atom *primitive_not_equal(struct atom *args, struct environment *env);
@@ -317,7 +319,7 @@ struct atom *primitive_print(struct atom *args, struct environment *env) {
   }
 
   while (args && args->type == ATOM_TYPE_CONS) {
-    print(car(args));
+    print(stdout, car(args));
     printf("\n");
     args = cdr(args);
   }
@@ -339,9 +341,22 @@ struct atom *primitive_read(struct atom *args, struct environment *env) {
     return NULL;
   }
 
-  // TODO: need read_atom to support reading from strings
-  // return read_atom(fp);
-  return atom_nil();
+  struct source_file *source = source_file_str(input->value.string.ptr, input->value.string.len);
+  if (!source) {
+    fprintf(stderr, "Error: could not create source from string '%s'\n", input->value.string.ptr);
+    return NULL;
+  }
+
+  struct atom *result = read_atom(source);
+
+  source_file_free(source);
+
+  if (!result) {
+    fprintf(stderr, "Error: could not read from string '%s'\n", input->value.string.ptr);
+    return NULL;
+  }
+
+  return result;
 }
 
 struct atom *primitive_readf(struct atom *args, struct environment *env) {
@@ -358,14 +373,16 @@ struct atom *primitive_readf(struct atom *args, struct environment *env) {
     return NULL;
   }
 
-  FILE *fp = fopen(input->value.string.ptr, "r");
-  if (!fp) {
+  struct source_file *source = source_file_new(input->value.string.ptr);
+  if (!source) {
     fprintf(stderr, "Error: could not open file '%s'\n", input->value.string.ptr);
     return NULL;
   }
 
-  struct atom *result = read_atom(fp);
-  fclose(fp);
+  struct atom *result = read_atom(source);
+
+  source_file_free(source);
+
   if (!result) {
     fprintf(stderr, "Error: could not read from file '%s'\n", input->value.string.ptr);
     return NULL;
@@ -374,54 +391,88 @@ struct atom *primitive_readf(struct atom *args, struct environment *env) {
   return result;
 }
 
-struct atom *primitive_slurp(struct atom *args, struct environment *env) {
+struct atom *primitive_read_all(struct atom *args, struct environment *env) {
   (void)env;
 
   if (!args || args->type != ATOM_TYPE_CONS || !args->value.cons.car) {
-    fprintf(stderr, "Error: 'slurp' requires one argument\n");
+    fprintf(stderr, "Error: 'read-all' requires one argument\n");
     return NULL;
   }
 
   struct atom *input = car(args);
   if (input->type != ATOM_TYPE_STRING) {
-    fprintf(stderr, "Error: 'slurp' argument must be a string\n");
+    fprintf(stderr, "Error: 'read-all' argument must be a string\n");
     return NULL;
   }
 
-  FILE *fp = fopen(input->value.string.ptr, "r");
-  if (!fp) {
+  struct source_file *source = source_file_new(input->value.string.ptr);
+  if (!source) {
     fprintf(stderr, "Error: could not open file '%s'\n", input->value.string.ptr);
     return NULL;
   }
 
-  off_t file_size = 0;
-  fseek(fp, 0, SEEK_END);
-  file_size = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
+  struct atom *head = NULL;
+  struct atom *tail = NULL;
 
-  char *buffer = (char *)malloc(file_size + 1);
+  while (!source_file_eof(source)) {
+    struct atom *result = read_atom(source);
+    if (!result) {
+      fprintf(stderr, "Error: could not read from file '%s'\n", input->value.string.ptr);
+      source_file_free(source);
+      return NULL;
+    }
+
+    struct atom *cons = new_cons(result, NULL);
+    if (!head) {
+      head = cons;
+      tail = head;
+    } else {
+      tail->value.cons.cdr = cons;
+      tail = cons;
+    }
+  }
+
+  source_file_free(source);
+
+  if (!head) {
+    return atom_nil();
+  }
+
+  return head;
+}
+
+struct atom *primitive_read_line(struct atom *args, struct environment *env) {
+  (void)args;
+  (void)env;
+
+  // read a single line from stdin
+  char *buffer = (char *)malloc(1024);
   if (!buffer) {
-    fprintf(stderr, "Error: could not allocate memory for file contents\n");
-    fclose(fp);
+    fprintf(stderr, "Error: could not allocate memory for reading line\n");
     return NULL;
   }
 
-  size_t bytes_read = fread(buffer, 1, file_size, fp);
-  fclose(fp);
-  if (bytes_read != (size_t)file_size) {
-    fprintf(stderr, "Error: could not read entire file '%s'\n", input->value.string.ptr);
-    free(buffer);
-    return NULL;
+  size_t at = 0;
+  size_t sz = 1024;
+  while (1) {
+    char c = fgetc(stdin);
+    if (c == EOF || c == '\n' || c == '\r') {
+      buffer[at] = '\0';
+      break;
+    }
+
+    buffer[at++] = c;
+    if (at >= (sz - 1)) {
+      sz *= 2;
+      buffer = (char *)realloc(buffer, sz);
+    }
   }
 
-  buffer[file_size] = '\0';
-
-  union atom_value value = {.string = {.ptr = buffer, .len = file_size}};
+  union atom_value value = {.string = {.ptr = buffer, .len = at}};
   return new_atom(ATOM_TYPE_STRING, value);
 }
 
 void init_primitives(struct environment *env) {
-  // Add primitive functions to the environment
   env_bind_noref(env, intern_noref("+", 0), primitive_function(primitive_add));
   env_bind_noref(env, intern_noref("-", 0), primitive_function(primitive_subtract));
   env_bind_noref(env, intern_noref("*", 0), primitive_function(primitive_multiply));
@@ -437,5 +488,6 @@ void init_primitives(struct environment *env) {
   env_bind_noref(env, intern_noref("print", 0), primitive_function(primitive_print));
   env_bind_noref(env, intern_noref("read", 0), primitive_function(primitive_read));
   env_bind_noref(env, intern_noref("readf", 0), primitive_function(primitive_readf));
-  env_bind_noref(env, intern_noref("slurp", 0), primitive_function(primitive_slurp));
+  env_bind_noref(env, intern_noref("read-all", 0), primitive_function(primitive_read_all));
+  env_bind_noref(env, intern_noref("read-line", 0), primitive_function(primitive_read_line));
 }

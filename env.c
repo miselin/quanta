@@ -9,7 +9,7 @@
 #include "special.h"
 
 struct environment {
-  GHashTable *bindings;
+  GHashTable *bindings;  // char* -> struct atom* bindings
 
   struct environment *parent;  // for nested environments
 

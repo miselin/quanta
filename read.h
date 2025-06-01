@@ -4,7 +4,8 @@
 #include <stdio.h>
 
 #include "atom.h"
+#include "source.h"
 
-struct atom *read_atom(FILE *fp);
+struct atom *read_atom(struct source_file *source);
 
 #endif  // _MATTLISP_READ_H
