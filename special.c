@@ -60,13 +60,16 @@ struct atom *defun(struct atom *args, struct environment *env) {
     return NULL;
   }
 
+  // placeholder binding for self-references
+  env_bind(env, name, atom_nil());
+
   struct atom *defn = lambda(cdr(args), env);
   if (!defn) {
     fprintf(stderr, "Error: 'defun' failed to create lambda\n");
     return NULL;
   }
 
-  env_bind(env, name, defn);
+  env_set(env, name, defn);
 
   return name;
 }
@@ -93,8 +96,7 @@ struct atom *special_form_define(struct atom *args, struct environment *env) {
             name->value.string.ptr);
   }
 
-  // Create the initial binding so it's visible in any new environments created during definition
-  // (e.g. in a lambda).
+  // placeholder binding for self-references
   env_bind(env, name, atom_nil());
 
   struct atom *value_evaled = eval(value, env);
@@ -107,7 +109,6 @@ struct atom *special_form_define(struct atom *args, struct environment *env) {
     env_bind(value_evaled->value.lambda.env, name, value_evaled);
   }
 
-  // Overwrite the nil binding with the final value now that we know it.
   env_set(env, name, value_evaled);
 
   return name;

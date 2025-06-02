@@ -101,7 +101,7 @@ struct atom *apply(struct atom *fn, struct atom *args, struct environment *env) 
     // Call the internal function - no environment cloning needed
     return fn->value.primitive(args, env);
   } else if (fn->type != ATOM_TYPE_LAMBDA) {
-    fprintf(stderr, "Error: expected a function\n");
+    fprintf(stderr, "Error: expected a function, got %d\n", fn->type);
     return NULL;
   }
 

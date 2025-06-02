@@ -28,7 +28,7 @@ struct environment *create_default_environment(void) {
 struct environment *create_environment(struct environment *parent) {
   struct environment *env = gc_new(GC_TYPE_ENVIRONMENT, sizeof(struct environment));
 
-  env->bindings = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+  env->bindings = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
   env->parent = parent;
 
   return env;
@@ -46,7 +46,6 @@ struct environment *clone_environment(struct environment *env) {
   gpointer key, value;
   g_hash_table_iter_init(&iter, env->bindings);
   while (g_hash_table_iter_next(&iter, &key, &value)) {
-    // TODO: this copies the binding_cell pointer - need to add this to GC!
     g_hash_table_insert(new_env->bindings, g_strdup(key), value);
   }
 
@@ -76,17 +75,22 @@ static struct binding_cell *env_lookup_cell(struct environment *env, struct atom
 struct atom *env_lookup(struct environment *env, struct atom *symbol) {
   struct binding_cell *cell = env_lookup_cell(env, symbol);
   if (cell) {
+    fprintf(stderr, "Found binding for symbol '%s' in env cell %p\n", symbol->value.string.ptr,
+            (void *)cell);
     return cell->atom;
   }
 
-  return atom_nil();
+  return NULL;
 }
 
 void env_bind(struct environment *env, struct atom *symbol, struct atom *value) {
   // TODO: if already set, we need to error (create a bind_set and use it instead)
 
-  struct binding_cell *cell = calloc(1, sizeof(struct binding_cell));
+  struct binding_cell *cell = gc_new(GC_TYPE_BINDING_CELL, sizeof(struct binding_cell));
   cell->atom = value;
+
+  fprintf(stderr, "Binding value for symbol '%s' in env cell %p\n", symbol->value.string.ptr,
+          (void *)cell);
 
   // key is an interned string, value is the real atom value
   // the binding should not outlive the atom
@@ -96,11 +100,14 @@ void env_bind(struct environment *env, struct atom *symbol, struct atom *value) 
 void env_set(struct environment *env, struct atom *symbol, struct atom *value) {
   struct binding_cell *cell = env_lookup_cell(env, symbol);
   if (cell) {
+    fprintf(stderr, "Setting value for symbol '%s' in env cell %p\n", symbol->value.string.ptr,
+            (void *)cell);
     cell->atom = value;
     return;
   }
 
   // TODO: error if not found, set requires an existing binding
+  fprintf(stderr, "Warning: env_set called on unbound symbol '%s'\n", symbol->value.string.ptr);
 }
 
 void environment_gc_mark(struct environment *env) {
@@ -118,6 +125,10 @@ void environment_gc_mark(struct environment *env) {
   g_hash_table_iter_init(&iter, env->bindings);
   while (g_hash_table_iter_next(&iter, &key, &value)) {
     struct binding_cell *cell = (struct binding_cell *)value;
+    if (gc_mark(cell)) {
+      continue;
+    }
+
     if (cell && cell->atom) {
       atom_mark(cell->atom);
     }

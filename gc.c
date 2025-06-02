@@ -110,6 +110,9 @@ void gc_run(void) {
         struct environment *env = (struct environment *)(node + 1);
 
         environment_gc_mark(env);
+      } else if (node->type == GC_TYPE_BINDING_CELL) {
+        // Should already be marked by environment marking.
+        node->marked = 1;
       } else {
         fprintf(stderr, "Warning: gc_run called with unsupported GC type %d\n", node->type);
       }
@@ -153,6 +156,11 @@ void gc_run(void) {
     } else if (node->type == GC_TYPE_ENVIRONMENT) {
       struct environment *env = (struct environment *)(node + 1);
       erase_environment(env);
+    } else if (node->type == GC_TYPE_BINDING_CELL) {
+      // Nothing within a binding cell needs to be erased.
+    } else {
+      fprintf(stderr, "Warning: gc_run called with unsupported GC type for erasure %d\n",
+              node->type);
     }
 
     struct gcnode *next = node->next;
