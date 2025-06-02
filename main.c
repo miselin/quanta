@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <clog.h>
+
 #include "atom.h"
 #include "env.h"
 #include "eval.h"
@@ -14,6 +16,11 @@
 #include "source.h"
 
 int main(int argc, char *argv[]) {
+  for (size_t i = 0; i < LOGGER_COUNT; ++i) {
+    clog_init_fd(i, 2);
+    clog_set_level(i, CLOG_INFO);
+  }
+
   gc_init();
   init_intern_tables();
 
@@ -75,5 +82,9 @@ int main(int argc, char *argv[]) {
 
   gc_run();
   gc_shutdown();
+
+  for (size_t i = 0; i < LOGGER_COUNT; ++i) {
+    clog_free(i);
+  }
   return 0;
 }

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(quanta C)
 
+include(FetchContent)
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(deps REQUIRED IMPORTED_TARGET glib-2.0)
 
@@ -31,4 +33,4 @@ add_executable(quanta
     source.c
     gc.c
 )
-target_link_libraries(quanta PkgConfig::deps)
+target_link_libraries(quanta PkgConfig::deps clog)
