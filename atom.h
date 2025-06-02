@@ -47,7 +47,6 @@ union atom_value {
 struct atom {
   enum AtomType type;
   union atom_value value;
-  gatomicrefcount ref_count;
 };
 
 struct atom *atom_nil(void);
@@ -55,8 +54,9 @@ struct atom *atom_true(void);
 
 struct atom *new_atom(enum AtomType type, union atom_value value);
 
-struct atom *atom_ref(struct atom *atom);
-void atom_deref(struct atom *atom);
+// Erase allocated memory inside an atom (e.g. strings)
+// Does not free other atoms (e.g. cons cells).
+void erase_atom(struct atom *atom);
 
 struct atom *new_cons(struct atom *car, struct atom *cdr);
 
@@ -72,5 +72,8 @@ int is_int(struct atom *atom);
 int is_float(struct atom *atom);
 int is_true(struct atom *atom);
 int is_basic_type(struct atom *atom);
+
+// Exposed for GC
+void atom_mark(struct atom *atom);
 
 #endif  // _MATTLISP_ATOM_H

@@ -68,7 +68,7 @@ struct atom *primitive_cons(struct atom *args, struct environment *env) {
 
   struct atom *cell_car = car(args);
   struct atom *cell_cdr = car(cdr(args));
-  return new_cons(atom_ref(cell_car), atom_ref(cell_cdr));
+  return new_cons(cell_car, cell_cdr);
 }
 
 struct atom *primitive_car(struct atom *args, struct environment *env) {
@@ -473,21 +473,21 @@ struct atom *primitive_read_line(struct atom *args, struct environment *env) {
 }
 
 void init_primitives(struct environment *env) {
-  env_bind_noref(env, intern_noref("+", 0), primitive_function(primitive_add));
-  env_bind_noref(env, intern_noref("-", 0), primitive_function(primitive_subtract));
-  env_bind_noref(env, intern_noref("*", 0), primitive_function(primitive_multiply));
-  env_bind_noref(env, intern_noref("/", 0), primitive_function(primitive_divide));
-  env_bind_noref(env, intern_noref("eq?", 0), primitive_function(primitive_equal));
-  env_bind_noref(env, intern_noref("cons", 0), primitive_function(primitive_cons));
-  env_bind_noref(env, intern_noref("car", 0), primitive_function(primitive_car));
-  env_bind_noref(env, intern_noref("cdr", 0), primitive_function(primitive_cdr));
-  env_bind_noref(env, intern_noref("atom?", 0), primitive_function(primitive_atomp));
-  env_bind_noref(env, intern_noref("nil?", 0), primitive_function(primitive_nilp));
-  env_bind_noref(env, intern_noref("apply", 0), primitive_function(primitive_apply));
-  env_bind_noref(env, intern_noref("eval", 0), primitive_function(primitive_eval));
-  env_bind_noref(env, intern_noref("print", 0), primitive_function(primitive_print));
-  env_bind_noref(env, intern_noref("read", 0), primitive_function(primitive_read));
-  env_bind_noref(env, intern_noref("readf", 0), primitive_function(primitive_readf));
-  env_bind_noref(env, intern_noref("read-all", 0), primitive_function(primitive_read_all));
-  env_bind_noref(env, intern_noref("read-line", 0), primitive_function(primitive_read_line));
+  env_bind(env, intern("+", 0), primitive_function(primitive_add));
+  env_bind(env, intern("-", 0), primitive_function(primitive_subtract));
+  env_bind(env, intern("*", 0), primitive_function(primitive_multiply));
+  env_bind(env, intern("/", 0), primitive_function(primitive_divide));
+  env_bind(env, intern("eq?", 0), primitive_function(primitive_equal));
+  env_bind(env, intern("cons", 0), primitive_function(primitive_cons));
+  env_bind(env, intern("car", 0), primitive_function(primitive_car));
+  env_bind(env, intern("cdr", 0), primitive_function(primitive_cdr));
+  env_bind(env, intern("atom?", 0), primitive_function(primitive_atomp));
+  env_bind(env, intern("nil?", 0), primitive_function(primitive_nilp));
+  env_bind(env, intern("apply", 0), primitive_function(primitive_apply));
+  env_bind(env, intern("eval", 0), primitive_function(primitive_eval));
+  env_bind(env, intern("print", 0), primitive_function(primitive_print));
+  env_bind(env, intern("read", 0), primitive_function(primitive_read));
+  env_bind(env, intern("readf", 0), primitive_function(primitive_readf));
+  env_bind(env, intern("read-all", 0), primitive_function(primitive_read_all));
+  env_bind(env, intern("read-line", 0), primitive_function(primitive_read_line));
 }

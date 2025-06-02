@@ -7,12 +7,14 @@
 #include "atom.h"
 #include "env.h"
 #include "eval.h"
+#include "gc.h"
 #include "intern.h"
 #include "print.h"
 #include "read.h"
 #include "source.h"
 
 int main(int argc, char *argv[]) {
+  gc_init();
   init_intern_tables();
 
   struct source_file *source = NULL;
@@ -27,6 +29,8 @@ int main(int argc, char *argv[]) {
   }
 
   struct environment *env = create_default_environment();
+  gc_retain(env);
+
   // fprintf(stderr, "repl: using environment %p\n", (void *)env);
 
   int is_interactive = isatty(STDIN_FILENO);
@@ -49,7 +53,6 @@ int main(int argc, char *argv[]) {
     }
 
     struct atom *evaled = eval(atom, env);
-    atom_deref(atom);
 
     if (!evaled) {
       printf("Error evaluating atom.\n");
@@ -59,15 +62,18 @@ int main(int argc, char *argv[]) {
     print(stdout, evaled);
     printf("\n");
 
-    atom_deref(evaled);
+    gc_run();
   }
 
   source_file_free(source);
 
   fflush(stdout);
 
-  deref_environment(env);
+  gc_release(env);
 
   cleanup_intern_tables();
+
+  gc_run();
+  gc_shutdown();
   return 0;
 }

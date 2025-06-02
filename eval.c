@@ -16,7 +16,7 @@ struct atom *eval(struct atom *atom, struct environment *env) {
   fprintf(stderr, "\n");
 
   if (!atom || is_basic_type(atom)) {
-    return atom_ref(atom);
+    return atom;
   }
 
   if (atom->type == ATOM_TYPE_SYMBOL) {
@@ -43,20 +43,15 @@ struct atom *eval(struct atom *atom, struct environment *env) {
     struct atom *args = fn->type == ATOM_TYPE_SPECIAL ? cdr : eval_list(cdr, env);
     if (!args) {
       fprintf(stderr, "Error evaluating arguments\n");
-      atom_deref(fn);
       return NULL;
     }
 
     // TODO: tail-recursion optimization (iterative evaluation instead of recursive)
     struct atom *result = apply(fn, args, env);
-    if (fn->type != ATOM_TYPE_SPECIAL) {
-      atom_deref(args);
-    }
-    atom_deref(fn);
     return result;
   }
 
-  return atom_ref(atom);
+  return atom;
 }
 
 static struct atom *eval_list(struct atom *atom, struct environment *env) {
@@ -122,7 +117,6 @@ struct atom *apply(struct atom *fn, struct atom *args, struct environment *env) 
   while (binding_list && binding_list->type == ATOM_TYPE_CONS) {
     if (!current_args || current_args->type != ATOM_TYPE_CONS) {
       fprintf(stderr, "Error: not enough arguments for lambda function\n");
-      deref_environment(env);
       return NULL;
     }
 
@@ -131,7 +125,6 @@ struct atom *apply(struct atom *fn, struct atom *args, struct environment *env) 
 
     struct atom *evaled = eval(arg, env);
     env_bind(env, param, evaled);
-    atom_deref(evaled);
 
     binding_list = cdr(binding_list);
     current_args = cdr(current_args);
@@ -139,24 +132,19 @@ struct atom *apply(struct atom *fn, struct atom *args, struct environment *env) 
 
   if (binding_list && binding_list->type != ATOM_TYPE_NIL) {
     fprintf(stderr, "Error: not enough parameters for function\n");
-    deref_environment(env);
     return NULL;
   }
 
   if (current_args && current_args->type != ATOM_TYPE_NIL) {
     fprintf(stderr, "Error: too many parameters for function\n");
-    deref_environment(env);
     return NULL;
   }
 
   struct atom *result = eval(fn->value.lambda.body, env);
   if (!result) {
     fprintf(stderr, "Error evaluating lambda body\n");
-    deref_environment(env);
     return NULL;
   }
-
-  deref_environment(env);
 
   return result;
 }

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "env.h"
+#include "gc.h"
 
 static struct atom g_atom_nil = {
     .type = ATOM_TYPE_NIL,
@@ -25,81 +26,10 @@ struct atom *atom_true(void) {
 }
 
 struct atom *new_atom(enum AtomType type, union atom_value value) {
-  struct atom *atom = calloc(1, sizeof(struct atom));
+  struct atom *atom = gc_new(GC_TYPE_ATOM, sizeof(struct atom));
   atom->type = type;
   atom->value = value;
-  g_atomic_ref_count_init(&atom->ref_count);
   return atom;
-}
-
-struct atom *atom_ref(struct atom *atom) {
-  if (!atom) {
-    return atom;
-  } else if (atom == &g_atom_nil || atom == &g_atom_true) {
-    // g_atom_nil and g_atom_true are static atoms, do not increment their ref count
-    return atom;
-  }
-
-  // fprintf(stderr, "ref atom %p\n", (void *)atom);
-
-  g_atomic_ref_count_inc(&atom->ref_count);
-
-  // When we ref a cons cell we need to ref its contents too.
-  if (atom->type == ATOM_TYPE_CONS) {
-    atom_ref(atom->value.cons.car);
-    atom_ref(atom->value.cons.cdr);
-  }
-
-  if (atom->type == ATOM_TYPE_LAMBDA) {
-    atom_ref(atom->value.lambda.args);
-    atom_ref(atom->value.lambda.body);
-    ref_environment(atom->value.lambda.env);
-  }
-
-  return atom;
-}
-
-void atom_deref(struct atom *atom) {
-  if (!atom) {
-    return;
-  } else if (atom == &g_atom_nil || atom == &g_atom_true) {
-    // g_atom_nil and g_atom_true are static atoms, do not free them
-    return;
-  }
-
-  // fprintf(stderr, "deref atom %p\n", (void *)atom);
-
-  // handle values that always get ref counts incremented in atom_ref
-  switch (atom->type) {
-    case ATOM_TYPE_CONS:
-      atom_deref(atom->value.cons.car);
-      atom_deref(atom->value.cons.cdr);
-      break;
-    case ATOM_TYPE_LAMBDA:
-      atom_deref(atom->value.lambda.args);
-      atom_deref(atom->value.lambda.body);
-      deref_environment(atom->value.lambda.env);
-      break;
-    default:
-      break;
-  }
-
-  if (!g_atomic_ref_count_dec(&atom->ref_count)) {
-    return;
-  }
-
-  // handle cleanup for specific atom values that aren't refcounted
-  switch (atom->type) {
-    case ATOM_TYPE_SYMBOL:
-    case ATOM_TYPE_KEYWORD:
-    case ATOM_TYPE_STRING:
-      free(atom->value.string.ptr);
-      break;
-    default:
-      break;
-  }
-
-  free(atom);
 }
 
 struct atom *new_cons(struct atom *car, struct atom *cdr) {
@@ -118,6 +48,22 @@ struct atom *new_cons(struct atom *car, struct atom *cdr) {
   union atom_value value = {.cons = {.car = car, .cdr = cdr}};
 
   return new_atom(ATOM_TYPE_CONS, value);
+}
+
+void erase_atom(struct atom *atom) {
+  if (!atom) {
+    return;
+  }
+
+  switch (atom->type) {
+    case ATOM_TYPE_STRING:
+    case ATOM_TYPE_SYMBOL:
+    case ATOM_TYPE_KEYWORD:
+      free(atom->value.string.ptr);
+      break;
+    default:
+      break;
+  }
 }
 
 struct atom *car(struct atom *atom) {
@@ -186,4 +132,27 @@ int is_basic_type(struct atom *atom) {
   return atom && (atom->type == ATOM_TYPE_INT || atom->type == ATOM_TYPE_FLOAT ||
                   atom->type == ATOM_TYPE_STRING || atom->type == ATOM_TYPE_NIL ||
                   atom->type == ATOM_TYPE_TRUE);
+}
+
+void atom_mark(struct atom *atom) {
+  if (!atom || atom == &g_atom_nil || atom == &g_atom_true) {
+    return;
+  }
+
+  if (gc_mark(atom)) {
+    // already marked, don't recurse
+    return;
+  }
+
+  // When we mark a cons cell we need to mark its contents too.
+  if (atom->type == ATOM_TYPE_CONS) {
+    atom_mark(atom->value.cons.car);
+    atom_mark(atom->value.cons.cdr);
+  }
+
+  if (atom->type == ATOM_TYPE_LAMBDA) {
+    atom_mark(atom->value.lambda.args);
+    atom_mark(atom->value.lambda.body);
+    environment_gc_mark(atom->value.lambda.env);
+  }
 }

@@ -22,7 +22,7 @@ struct atom *quote(struct atom *args, struct environment *env) {
   }
 
   // Return the first element of the list, without evaluating it
-  return atom_ref(car(args));
+  return car(args);
 }
 
 struct atom *lambda(struct atom *args, struct environment *env) {
@@ -45,7 +45,7 @@ struct atom *lambda(struct atom *args, struct environment *env) {
   }
 
   union atom_value value = {
-      .lambda = {.args = atom_ref(params), .env = clone_environment(env), .body = atom_ref(body)}};
+      .lambda = {.args = params, .env = clone_environment(env), .body = body}};
 
   return new_atom(ATOM_TYPE_LAMBDA, value);
 }
@@ -67,9 +67,8 @@ struct atom *defun(struct atom *args, struct environment *env) {
   }
 
   env_bind(env, name, defn);
-  atom_deref(defn);
 
-  return atom_ref(name);
+  return name;
 }
 
 struct atom *special_form_define(struct atom *args, struct environment *env) {
@@ -92,7 +91,6 @@ struct atom *special_form_define(struct atom *args, struct environment *env) {
     // TODO: detect interactive REPL, and only warn/error if not there
     fprintf(stderr, "Warning: 'define' overwriting existing binding for %s\n",
             name->value.string.ptr);
-    atom_deref(existing);
   }
 
   // Ensure
@@ -110,9 +108,8 @@ struct atom *special_form_define(struct atom *args, struct environment *env) {
 
   // Overwrite the nil binding with the eventual value
   env_bind(env, name, value_evaled);
-  atom_deref(value_evaled);
 
-  return atom_ref(name);
+  return name;
 }
 
 struct atom *special_form_set(struct atom *args, struct environment *env) {
@@ -130,12 +127,10 @@ struct atom *special_form_set(struct atom *args, struct environment *env) {
     return NULL;
   }
 
-  atom_deref(existing);
-
   struct atom *value = car(cdr(args));
   env_bind(env, name, value);
 
-  return atom_ref(name);
+  return name;
 }
 
 struct atom *special_form_begin(struct atom *args, struct environment *env) {
@@ -188,7 +183,6 @@ struct atom *special_form_let(struct atom *args, struct environment *env) {
     struct atom *binding = car(bindings);
     if (binding->type != ATOM_TYPE_CONS || !binding->value.cons.car || !binding->value.cons.cdr) {
       fprintf(stderr, "Error: 'let' binding must be a (name value) pair\n");
-      deref_environment(let_env);
       return NULL;
     }
 
@@ -197,25 +191,21 @@ struct atom *special_form_let(struct atom *args, struct environment *env) {
 
     if (name->type != ATOM_TYPE_SYMBOL) {
       fprintf(stderr, "Error: 'let' binding name must be a symbol\n");
-      deref_environment(let_env);
       return NULL;
     }
 
     struct atom *evaled_value = eval(value, let_env);
     if (!evaled_value) {
       fprintf(stderr, "Error evaluating 'let' binding value\n");
-      deref_environment(let_env);
       return NULL;
     }
 
     env_bind(let_env, name, evaled_value);
-    atom_deref(evaled_value);
 
     bindings = cdr(bindings);
   }
 
   struct atom *result = special_form_begin(body, let_env);
-  deref_environment(let_env);
 
   return result;
 }
@@ -245,11 +235,9 @@ struct atom *special_form_cond(struct atom *args, struct environment *env) {
     }
 
     if (is_true(evaled_test)) {
-      atom_deref(evaled_test);
       return special_form_begin(body, env);
     }
 
-    atom_deref(evaled_test);
     args = cdr(args);
   }
 
@@ -257,12 +245,12 @@ struct atom *special_form_cond(struct atom *args, struct environment *env) {
 }
 
 void init_special_forms(struct environment *env) {
-  env_bind_noref(env, intern_noref("quote", 0), special_form(quote));
-  env_bind_noref(env, intern_noref("lambda", 0), special_form(lambda));
-  env_bind_noref(env, intern_noref("begin", 0), special_form(special_form_begin));
-  env_bind_noref(env, intern_noref("define", 0), special_form(special_form_define));
-  env_bind_noref(env, intern_noref("defun", 0), special_form(defun));
-  env_bind_noref(env, intern_noref("set!", 0), special_form(special_form_set));
-  env_bind_noref(env, intern_noref("let", 0), special_form(special_form_let));
-  env_bind_noref(env, intern_noref("cond", 0), special_form(special_form_cond));
+  env_bind(env, intern("quote", 0), special_form(quote));
+  env_bind(env, intern("lambda", 0), special_form(lambda));
+  env_bind(env, intern("begin", 0), special_form(special_form_begin));
+  env_bind(env, intern("define", 0), special_form(special_form_define));
+  env_bind(env, intern("defun", 0), special_form(defun));
+  env_bind(env, intern("set!", 0), special_form(special_form_set));
+  env_bind(env, intern("let", 0), special_form(special_form_let));
+  env_bind(env, intern("cond", 0), special_form(special_form_cond));
 }

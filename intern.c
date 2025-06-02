@@ -4,20 +4,14 @@
 #include <stdio.h>
 
 #include "atom.h"
+#include "gc.h"
 
 static GHashTable *symbol_table = NULL;
 static GHashTable *keyword_table = NULL;
 
-static void free_atom_value(void *value) {
-  struct atom *atom = (struct atom *)value;
-  if (atom) {
-    atom_deref(atom);
-  }
-}
-
 void init_intern_tables(void) {
-  symbol_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, free_atom_value);
-  keyword_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, free_atom_value);
+  symbol_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+  keyword_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 }
 
 void cleanup_intern_tables(void) {
@@ -33,10 +27,6 @@ void cleanup_intern_tables(void) {
 }
 
 struct atom *intern(const char *name, int is_keyword) {
-  return atom_ref(intern_noref(name, is_keyword));
-}
-
-struct atom *intern_noref(const char *name, int is_keyword) {
   if (!symbol_table) {
     init_intern_tables();
   }
@@ -57,4 +47,18 @@ struct atom *intern_noref(const char *name, int is_keyword) {
 
   g_hash_table_insert(table, g_strdup(atom->value.string.ptr), atom);
   return atom;
+}
+
+void intern_gc_mark(void) {
+  GHashTableIter iter;
+  gpointer key, value;
+  if (!symbol_table || !keyword_table) {
+    return;  // no intern tables initialized
+  }
+
+  g_hash_table_iter_init(&iter, symbol_table);
+  while (g_hash_table_iter_next(&iter, &key, &value)) {
+    struct atom *atom = (struct atom *)value;
+    gc_mark(atom);
+  }
 }

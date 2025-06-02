@@ -29,5 +29,6 @@ add_executable(mattlisp
     primitive.c
     special.c
     source.c
+    gc.c
 )
 target_link_libraries(mattlisp PkgConfig::deps)

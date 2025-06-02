@@ -243,13 +243,11 @@ static struct atom *read_list(struct source_file *source) {
     if (dotted) {
       if (!prev) {
         fprintf(stderr, "Error: cannot have dotted pair without a previous cons cell\n");
-        atom_deref(atom);
         return NULL;
       }
 
       if (!is_nil(cdr(prev))) {
         fprintf(stderr, "Error: cannot have more than one dotted pair in a list\n");
-        atom_deref(atom);
         return NULL;
       }
 
@@ -258,7 +256,6 @@ static struct atom *read_list(struct source_file *source) {
       c = source_file_getc(source);
       if (c != ')') {
         fprintf(stderr, "Error: expected ')', got '%c'\n", c);
-        atom_deref(atom);
         return NULL;  // error reading list
       }
 
