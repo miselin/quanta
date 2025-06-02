@@ -1,5 +1,5 @@
-#ifndef _MATTLISP_GC_H
-#define _MATTLISP_GC_H
+#ifndef _QUANTA_GC_H
+#define _QUANTA_GC_H
 
 #include <stddef.h>
 
@@ -21,4 +21,4 @@ void gc_init(void);
 void gc_run(void);
 void gc_shutdown(void);
 
-#endif  // _MATTLISP_GC_H
+#endif  // _QUANTA_GC_H

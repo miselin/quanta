@@ -1,5 +1,5 @@
-#ifndef _MATTLISP_ATOM_H
-#define _MATTLISP_ATOM_H
+#ifndef _QUANTA_ATOM_H
+#define _QUANTA_ATOM_H
 
 #include <glib-2.0/glib.h>
 #include <stddef.h>
@@ -76,4 +76,4 @@ int is_basic_type(struct atom *atom);
 // Exposed for GC
 void atom_mark(struct atom *atom);
 
-#endif  // _MATTLISP_ATOM_H
+#endif  // _QUANTA_ATOM_H

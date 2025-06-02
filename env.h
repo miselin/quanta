@@ -1,5 +1,5 @@
-#ifndef _MATTLISP_ENV_H
-#define _MATTLISP_ENV_H
+#ifndef _QUANTA_ENV_H
+#define _QUANTA_ENV_H
 
 struct environment;
 
@@ -19,4 +19,4 @@ void env_set(struct environment *env, struct atom *symbol, struct atom *value);
 
 void environment_gc_mark(struct environment *env);
 
-#endif  // _MATTLISP_ENV_H
+#endif  // _QUANTA_ENV_H

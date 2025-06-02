@@ -1,5 +1,5 @@
-#ifndef _MATTLISP_READ_H
-#define _MATTLISP_READ_H
+#ifndef _QUANTA_READ_H
+#define _QUANTA_READ_H
 
 #include <stdio.h>
 
@@ -8,4 +8,4 @@
 
 struct atom *read_atom(struct source_file *source);
 
-#endif  // _MATTLISP_READ_H
+#endif  // _QUANTA_READ_H

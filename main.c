@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
 
   while (1) {
     if (is_interactive) {
-      printf("mattlisp> ");
+      printf("quanta> ");
       fflush(stdout);
     }
 

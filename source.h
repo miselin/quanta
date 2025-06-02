@@ -1,5 +1,5 @@
-#ifndef _MATTLISP_SOURCE_H
-#define _MATTLISP_SOURCE_H
+#ifndef _QUANTA_SOURCE_H
+#define _QUANTA_SOURCE_H
 
 #include <stddef.h>
 
@@ -21,4 +21,4 @@ int source_file_eof(struct source_file *source);
 
 void source_file_free(struct source_file *source);
 
-#endif  // _MATTLISP_SOURCE_H
+#endif  // _QUANTA_SOURCE_H

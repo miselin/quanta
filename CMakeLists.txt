@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(mattlisp C)
+project(quanta C)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(deps REQUIRED IMPORTED_TARGET glib-2.0)
@@ -18,7 +18,7 @@ set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -O2 -g")
 add_compile_options(-fsanitize=address)
 add_link_options(-fsanitize=address)
 
-add_executable(mattlisp
+add_executable(quanta
     main.c
     atom.c
     read.c
@@ -31,4 +31,4 @@ add_executable(mattlisp
     source.c
     gc.c
 )
-target_link_libraries(mattlisp PkgConfig::deps)
+target_link_libraries(quanta PkgConfig::deps)

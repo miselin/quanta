@@ -1,5 +1,5 @@
-#ifndef _MATTLISP_PRINT_H
-#define _MATTLISP_PRINT_H
+#ifndef _QUANTA_PRINT_H
+#define _QUANTA_PRINT_H
 
 #include <stdio.h>
 
@@ -7,4 +7,4 @@
 
 void print(FILE *fp, struct atom *atom);
 
-#endif  // _MATTLISP_PRINT_H
+#endif  // _QUANTA_PRINT_H

@@ -1,5 +1,5 @@
-#ifndef _MATTLISP_PRIMITIVE_H
-#define _MATTLISP_PRIMITIVE_H
+#ifndef _QUANTA_PRIMITIVE_H
+#define _QUANTA_PRIMITIVE_H
 
 #include "atom.h"
 #include "env.h"
@@ -22,4 +22,4 @@ struct atom *primitive_cdr(struct atom *args, struct environment *env);
 
 void init_primitives(struct environment *env);
 
-#endif  // _MATTLISP_PRIMITIVE_H
+#endif  // _QUANTA_PRIMITIVE_H
