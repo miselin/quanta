@@ -93,7 +93,8 @@ struct atom *special_form_define(struct atom *args, struct environment *env) {
             name->value.string.ptr);
   }
 
-  // Ensure
+  // Create the initial binding so it's visible in any new environments created during definition
+  // (e.g. in a lambda).
   env_bind(env, name, atom_nil());
 
   struct atom *value_evaled = eval(value, env);
@@ -106,8 +107,8 @@ struct atom *special_form_define(struct atom *args, struct environment *env) {
     env_bind(value_evaled->value.lambda.env, name, value_evaled);
   }
 
-  // Overwrite the nil binding with the eventual value
-  env_bind(env, name, value_evaled);
+  // Overwrite the nil binding with the final value now that we know it.
+  env_set(env, name, value_evaled);
 
   return name;
 }
@@ -128,7 +129,7 @@ struct atom *special_form_set(struct atom *args, struct environment *env) {
   }
 
   struct atom *value = car(cdr(args));
-  env_bind(env, name, value);
+  env_set(env, name, value);
 
   return name;
 }

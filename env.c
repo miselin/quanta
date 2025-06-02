@@ -9,8 +9,12 @@
 #include "primitive.h"
 #include "special.h"
 
+struct binding_cell {
+  struct atom *atom;
+};
+
 struct environment {
-  GHashTable *bindings;        // char* -> struct atom* bindings
+  GHashTable *bindings;        // char* -> struct binding_cell* bindings
   struct environment *parent;  // for nested environments
 };
 
@@ -24,7 +28,7 @@ struct environment *create_default_environment(void) {
 struct environment *create_environment(struct environment *parent) {
   struct environment *env = gc_new(GC_TYPE_ENVIRONMENT, sizeof(struct environment));
 
-  env->bindings = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+  env->bindings = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
   env->parent = parent;
 
   return env;
@@ -42,7 +46,8 @@ struct environment *clone_environment(struct environment *env) {
   gpointer key, value;
   g_hash_table_iter_init(&iter, env->bindings);
   while (g_hash_table_iter_next(&iter, &key, &value)) {
-    g_hash_table_insert(new_env->bindings, g_strdup(key), value);  // copy key and value
+    // TODO: this copies the binding_cell pointer - need to add this to GC!
+    g_hash_table_insert(new_env->bindings, g_strdup(key), value);
   }
 
   return new_env;
@@ -56,34 +61,46 @@ void erase_environment(struct environment *env) {
   g_hash_table_destroy(env->bindings);
 }
 
+static struct binding_cell *env_lookup_cell(struct environment *env, struct atom *symbol) {
+  while (env) {
+    struct binding_cell *cell = g_hash_table_lookup(env->bindings, symbol->value.string.ptr);
+    if (cell) {
+      return cell;
+    }
+
+    env = env->parent;
+  }
+  return NULL;
+}
+
 struct atom *env_lookup(struct environment *env, struct atom *symbol) {
-  if (!env || !symbol || symbol->type != ATOM_TYPE_SYMBOL) {
-    return NULL;  // invalid environment or symbol
+  struct binding_cell *cell = env_lookup_cell(env, symbol);
+  if (cell) {
+    return cell->atom;
   }
 
-  struct atom *bound = g_hash_table_lookup(env->bindings, symbol->value.string.ptr);
-  if (bound) {
-    return bound;
-  }
-
-  // check parent environment if it exists
-  if (env->parent) {
-    return env_lookup(env->parent, symbol);
-  }
-
-  return NULL;  // not found in this environment or any parent
+  return atom_nil();
 }
 
 void env_bind(struct environment *env, struct atom *symbol, struct atom *value) {
-  if (!env || !symbol || !value || symbol->type != ATOM_TYPE_SYMBOL) {
-    return;  // invalid environment or symbol
-  }
-
   // TODO: if already set, we need to error (create a bind_set and use it instead)
+
+  struct binding_cell *cell = calloc(1, sizeof(struct binding_cell));
+  cell->atom = value;
 
   // key is an interned string, value is the real atom value
   // the binding should not outlive the atom
-  g_hash_table_insert(env->bindings, g_strdup(symbol->value.string.ptr), value);
+  g_hash_table_insert(env->bindings, g_strdup(symbol->value.string.ptr), cell);
+}
+
+void env_set(struct environment *env, struct atom *symbol, struct atom *value) {
+  struct binding_cell *cell = env_lookup_cell(env, symbol);
+  if (cell) {
+    cell->atom = value;
+    return;
+  }
+
+  // TODO: error if not found, set requires an existing binding
 }
 
 void environment_gc_mark(struct environment *env) {
@@ -100,9 +117,9 @@ void environment_gc_mark(struct environment *env) {
 
   g_hash_table_iter_init(&iter, env->bindings);
   while (g_hash_table_iter_next(&iter, &key, &value)) {
-    struct atom *atom = (struct atom *)value;
-    if (atom) {
-      atom_mark(atom);
+    struct binding_cell *cell = (struct binding_cell *)value;
+    if (cell && cell->atom) {
+      atom_mark(cell->atom);
     }
   }
 
