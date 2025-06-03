@@ -6,7 +6,9 @@
 #include <string.h>
 
 #include "atom.h"
+#include "clog.h"
 #include "intern.h"
+#include "log.h"
 
 static struct atom *read_list(struct source_file *source);
 
@@ -93,7 +95,7 @@ struct atom *read_atom(struct source_file *source) {
     return NULL;  // empty atom
   }
 
-  fprintf(stderr, "processing atom from '%s'\n", buffer);
+  clog_debug(CLOG(LOGGER_READ), "processing atom from '%s'", buffer);
 
   if (is_str != 0) {
     fprintf(stderr, "Error: string not terminated properly\n");

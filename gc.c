@@ -6,6 +6,8 @@
 #include "atom.h"
 #include "env.h"
 #include "intern.h"
+#include "log.h"
+#include "third_party/clog.h"
 
 struct gcnode {
   enum GCType type;
@@ -114,7 +116,7 @@ void gc_run(void) {
         // Should already be marked by environment marking.
         node->marked = 1;
       } else {
-        fprintf(stderr, "Warning: gc_run called with unsupported GC type %d\n", node->type);
+        fprintf(stderr, "Warning: gc_run called with unsupported GC type %d", node->type);
       }
     }
   }
@@ -129,14 +131,15 @@ void gc_run(void) {
     node->marked = 0;
 
     if (marked) {
-      // fprintf(stderr, "GC: skipping %p of type %d (marked)\n", (void *)node, node->type);
+      clog_debug(CLOG(LOGGER_GC), "GC: skipping %p of type %d (marked)", (void *)node, node->type);
       // Safe.
       prev = node;
       node = node->next;
       continue;
     }
 
-    // fprintf(stderr, "GC: sweeping %p of type %d (not marked)\n", (void *)node, node->type);
+    clog_debug(CLOG(LOGGER_GC), "GC: sweeping %p of type %d (not marked)", (void *)node,
+               node->type);
 
     // Not marked, so it's available for collection.
     if (prev) {
@@ -165,7 +168,7 @@ void gc_run(void) {
 
     struct gcnode *next = node->next;
 
-    // fprintf(stderr, "GC: collected %p of type %d\n", (void *)node, node->type);
+    clog_debug(CLOG(LOGGER_GC), "GC: collected %p of type %d", (void *)node, node->type);
     free(node);
 
     node = next;

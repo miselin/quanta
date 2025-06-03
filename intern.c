@@ -5,6 +5,8 @@
 
 #include "atom.h"
 #include "gc.h"
+#include "log.h"
+#include "third_party/clog.h"
 
 static GHashTable *symbol_table = NULL;
 static GHashTable *keyword_table = NULL;
@@ -43,7 +45,7 @@ struct atom *intern(const char *name, int is_keyword) {
 
   struct atom *atom = new_atom(atom_type, value);
 
-  // fprintf(stderr, "interned %s as %p\n", name, (void *)atom);
+  clog_debug(CLOG(LOGGER_INTERN), "interned %s as %p", name, (void *)atom);
 
   g_hash_table_insert(table, g_strdup(atom->value.string.ptr), atom);
   return atom;

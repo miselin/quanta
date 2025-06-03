@@ -6,8 +6,10 @@
 
 #include "atom.h"
 #include "gc.h"
+#include "log.h"
 #include "primitive.h"
 #include "special.h"
+#include "third_party/clog.h"
 
 struct binding_cell {
   struct atom *atom;
@@ -75,8 +77,8 @@ static struct binding_cell *env_lookup_cell(struct environment *env, struct atom
 struct atom *env_lookup(struct environment *env, struct atom *symbol) {
   struct binding_cell *cell = env_lookup_cell(env, symbol);
   if (cell) {
-    fprintf(stderr, "Found binding for symbol '%s' in env cell %p\n", symbol->value.string.ptr,
-            (void *)cell);
+    clog_debug(CLOG(LOGGER_ENV), "Found binding for symbol '%s' in env cell %p",
+               symbol->value.string.ptr, (void *)cell);
     return cell->atom;
   }
 
@@ -89,8 +91,8 @@ void env_bind(struct environment *env, struct atom *symbol, struct atom *value) 
   struct binding_cell *cell = gc_new(GC_TYPE_BINDING_CELL, sizeof(struct binding_cell));
   cell->atom = value;
 
-  fprintf(stderr, "Binding value for symbol '%s' in env cell %p\n", symbol->value.string.ptr,
-          (void *)cell);
+  clog_debug(CLOG(LOGGER_ENV), "Binding value for symbol '%s' in env cell %p",
+             symbol->value.string.ptr, (void *)cell);
 
   // key is an interned string, value is the real atom value
   // the binding should not outlive the atom
@@ -100,14 +102,15 @@ void env_bind(struct environment *env, struct atom *symbol, struct atom *value) 
 void env_set(struct environment *env, struct atom *symbol, struct atom *value) {
   struct binding_cell *cell = env_lookup_cell(env, symbol);
   if (cell) {
-    fprintf(stderr, "Setting value for symbol '%s' in env cell %p\n", symbol->value.string.ptr,
-            (void *)cell);
+    clog_debug(CLOG(LOGGER_ENV), "Setting value for symbol '%s' in env cell %p",
+               symbol->value.string.ptr, (void *)cell);
     cell->atom = value;
     return;
   }
 
   // TODO: error if not found, set requires an existing binding
-  fprintf(stderr, "Warning: env_set called on unbound symbol '%s'\n", symbol->value.string.ptr);
+  clog_debug(CLOG(LOGGER_ENV), "Warning: env_set called on unbound symbol '%s'",
+             symbol->value.string.ptr);
 }
 
 void environment_gc_mark(struct environment *env) {

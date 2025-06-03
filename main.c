@@ -4,21 +4,24 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <clog.h>
-
 #include "atom.h"
 #include "env.h"
 #include "eval.h"
 #include "gc.h"
 #include "intern.h"
+#include "log.h"
 #include "print.h"
 #include "read.h"
 #include "source.h"
+#include "third_party/clog.h"
 
 int main(int argc, char *argv[]) {
+  unlink("quanta.log");
+  int log_fd = open("quanta.log", O_WRONLY | O_CREAT | O_APPEND, 0644);
+
   for (size_t i = 0; i < LOGGER_COUNT; ++i) {
-    clog_init_fd(i, 2);
-    clog_set_level(i, CLOG_INFO);
+    clog_init_fd(i, log_fd);
+    clog_set_level(i, CLOG_DEBUG);
   }
 
   gc_init();
@@ -38,7 +41,7 @@ int main(int argc, char *argv[]) {
   struct environment *env = create_default_environment();
   gc_retain(env);
 
-  // fprintf(stderr, "repl: using environment %p\n", (void *)env);
+  clog_debug(CLOG(LOGGER_MAIN), "REPL: using environment %p", (void *)env);
 
   int is_interactive = isatty(STDIN_FILENO);
 
@@ -86,5 +89,7 @@ int main(int argc, char *argv[]) {
   for (size_t i = 0; i < LOGGER_COUNT; ++i) {
     clog_free(i);
   }
+
+  close(log_fd);
   return 0;
 }
