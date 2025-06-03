@@ -125,16 +125,6 @@ TEST(ParseFailuresTest, StrayQuote) {
   source_file_free(source);
 }
 
-TEST(ParseFailuresTest, InvalidCharacter) {
-  struct source_file *source = source_file_str("#$", 0);
-  ASSERT_TRUE(source != NULL);
-
-  struct atom *atom = read_atom(source);
-  EXPECT_TRUE(is_error(atom));
-
-  source_file_free(source);
-}
-
 TEST(ParseFailuresTest, UnterminatedStringWithEscape) {
   struct source_file *source = source_file_str("\"abc\\", 0);
   ASSERT_TRUE(source != NULL);

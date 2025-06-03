@@ -40,15 +40,27 @@ static int is_terminator(char c) {
 }
 
 static int read_until_terminator(struct lex *lexer, char terminator, char *buffer,
-                                 size_t buffer_size) {
+                                 size_t buffer_size, int allow_escaping) {
   int at = 0;
+  int escape = 0;
   char c = source_file_getc(lexer->source);
-  while (c != EOF && c != terminator) {
+  while (c != EOF && (escape || c != terminator)) {
+    if (escape) {
+      escape = 0;
+    } else if (c == '\\' && allow_escaping) {
+      escape = 1;
+    }
+
     if ((size_t)at < buffer_size - 1) {
       buffer[at++] = c;
     }
     c = source_file_getc(lexer->source);
   }
+
+  if (escape || c == EOF) {
+    return -1;
+  }
+
   buffer[at] = '\0';
   return at > 0 ? at : -1;
 }
@@ -138,7 +150,7 @@ struct token *lex_peek_token(struct lex *lexer) {
       lexer->current_token = gc_new(GC_TYPE_TOKEN, sizeof(struct token));
       lexer->current_token->type = TOKEN_STRING;
       lexer->current_token->text = (char *)malloc(256);
-      int length = read_until_terminator(lexer, '"', (char *)lexer->current_token->text, 256);
+      int length = read_until_terminator(lexer, '"', (char *)lexer->current_token->text, 256, 1);
       if (length < 0) {
         lexer->current_token->type = TOKEN_ERROR;
         lexer->current_token->text = strdup("error reading string literal");
