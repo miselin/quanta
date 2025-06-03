@@ -16,13 +16,7 @@
 #include "third_party/clog.h"
 
 int main(int argc, char *argv[]) {
-  unlink("quanta.log");
-  int log_fd = open("quanta.log", O_WRONLY | O_CREAT | O_APPEND, 0644);
-
-  for (size_t i = 0; i < LOGGER_COUNT; ++i) {
-    clog_init_fd(i, log_fd);
-    clog_set_level(i, CLOG_DEBUG);
-  }
+  logging_init(1);
 
   gc_init();
   init_intern_tables();
@@ -100,11 +94,6 @@ int main(int argc, char *argv[]) {
 
   gc_run();
   gc_shutdown();
-
-  for (size_t i = 0; i < LOGGER_COUNT; ++i) {
-    clog_free(i);
-  }
-
-  close(log_fd);
+  logging_shutdown();
   return rc;
 }

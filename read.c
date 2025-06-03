@@ -41,7 +41,7 @@ static struct atom *read_atom_lex(struct lex *lex) {
 
   switch (token->type) {
     case TOKEN_EOF:
-      return NULL;
+      return new_atom_error(NULL, "unexpected end of file");
     case TOKEN_ERROR:
       return new_atom_error(NULL, "lexer error: %s", token->text);
     case TOKEN_ATOM:

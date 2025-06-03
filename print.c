@@ -4,62 +4,74 @@
 
 #include "atom.h"
 
-static void print_list(FILE *fp, struct atom *atom) {
-  if (atom->type != ATOM_TYPE_CONS) {
-    print(fp, atom);
-    return;
+static int print_list(char *buffer, size_t buffer_size, struct atom *atom) {
+  if (!is_cons(atom)) {
+    return print_str(buffer, buffer_size, atom);
   }
 
-  fprintf(fp, "(");
+  size_t offset = 0;
+  offset += snprintf(buffer + offset, buffer_size - offset, "(");
+
   while (atom && atom->type == ATOM_TYPE_CONS) {
-    print(fp, atom->value.cons.car);
-    atom = atom->value.cons.cdr;
+    offset += print_str(buffer + offset, buffer_size - offset, car(atom));
+
+    atom = cdr(atom);
     if (atom && atom->type == ATOM_TYPE_CONS) {
-      fprintf(fp, " ");
+      offset += snprintf(buffer + offset, buffer_size - offset, " ");
     }
   }
 
   if (atom && atom->type != ATOM_TYPE_NIL) {
-    fprintf(fp, " . ");
-    print(fp, atom);
+    offset += snprintf(buffer + offset, buffer_size - offset, " . ");
+    offset += print_str(buffer + offset, buffer_size - offset, atom);
   }
 
-  fprintf(fp, ")");
+  offset += snprintf(buffer + offset, buffer_size - offset, ")");
+  return (int)offset;
 }
 
 void print(FILE *fp, struct atom *atom) {
+  char *buffer = malloc(1024);
+  print_str(buffer, 1024, atom);
+
+  fputs(buffer, fp);
+  free(buffer);
+}
+
+int print_str(char *buffer, size_t buffer_size, struct atom *atom) {
   if (!atom) {
-    fprintf(fp, "nil");
-    return;
+    return snprintf(buffer, buffer_size, "nil");
   }
 
   switch (atom->type) {
     case ATOM_TYPE_INT:
-      fprintf(fp, "%ld", atom->value.ivalue);
+      return snprintf(buffer, buffer_size, "%ld", atom->value.ivalue);
       break;
     case ATOM_TYPE_FLOAT:
-      fprintf(fp, "%f", atom->value.fvalue);
+      return snprintf(buffer, buffer_size, "%f", atom->value.fvalue);
       break;
     case ATOM_TYPE_STRING:
-      fprintf(fp, "\"%s\"", atom->value.string.ptr);
+      return snprintf(buffer, buffer_size, "\"%s\"", atom->value.string.ptr);
       break;
     case ATOM_TYPE_CONS:
-      print_list(fp, atom);
+      return print_list(buffer, buffer_size, atom);
       break;
     case ATOM_TYPE_NIL:
-      fprintf(fp, "nil");
+      return snprintf(buffer, buffer_size, "nil");
       break;
     case ATOM_TYPE_SYMBOL:
-      fprintf(fp, "%s", atom->value.string.ptr);
+      return snprintf(buffer, buffer_size, "%s", atom->value.string.ptr);
       break;
     case ATOM_TYPE_KEYWORD:
-      fprintf(fp, "%s", atom->value.string.ptr);
+      return snprintf(buffer, buffer_size, "%s", atom->value.string.ptr);
       break;
     case ATOM_TYPE_TRUE:
-      fprintf(fp, "t");
+      return snprintf(buffer, buffer_size, "t");
       break;
     default:
       fprintf(stderr, "Unknown atom type: %d\n", atom->type);
       break;
   }
+
+  return 0;
 }

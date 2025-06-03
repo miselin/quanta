@@ -5,6 +5,10 @@
 
 struct source_file;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Creates a new source file by opening the given file.
 struct source_file *source_file_new(const char *filename);
 
@@ -20,5 +24,9 @@ void source_file_ungetc(struct source_file *source, char c);
 int source_file_eof(struct source_file *source);
 
 void source_file_free(struct source_file *source);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif  // _QUANTA_SOURCE_H

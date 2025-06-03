@@ -39,7 +39,7 @@ struct source_file *source_file_str(const char *str, size_t length) {
   struct source_file *source = calloc(1, sizeof(struct source_file));
   source->in_memory = 1;
   source->source.memory.buf = strdup(str);
-  source->source.memory.buflen = length;
+  source->source.memory.buflen = length == 0 ? strlen(str) : length;
   source->source.memory.pos = 0;
 
   return source;

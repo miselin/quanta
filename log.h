@@ -16,4 +16,15 @@
 
 #define LOGGER_COUNT 12
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void logging_init(int to_file);
+void logging_shutdown();
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
+
 #endif  // _QUANTA_LOG_H

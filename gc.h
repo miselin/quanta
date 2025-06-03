@@ -11,6 +11,10 @@ enum GCType {
   GC_TYPE_LEXER = 4,         // Lexer state
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void *gc_new(enum GCType type, size_t size);
 
 void gc_retain(void *ptr);
@@ -22,5 +26,9 @@ int gc_mark(void *ptr);
 void gc_init(void);
 void gc_run(void);
 void gc_shutdown(void);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif  // _QUANTA_GC_H

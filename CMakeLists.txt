@@ -22,8 +22,7 @@ add_link_options(-fsanitize=address)
 
 add_subdirectory(third_party)
 
-add_executable(quanta
-    main.c
+add_library(quanta STATIC
     atom.c
     read.c
     intern.c
@@ -35,5 +34,17 @@ add_executable(quanta
     source.c
     gc.c
     lex.c
+    log.c
 )
-target_link_libraries(quanta PkgConfig::deps clog)
+target_link_libraries(quanta PUBLIC PkgConfig::deps clog)
+target_include_directories(quanta PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(quanta_bin
+    main.c
+)
+target_link_libraries(quanta_bin quanta)
+set_property(TARGET quanta_bin PROPERTY OUTPUT_NAME quanta)
+
+enable_testing()
+
+add_subdirectory(tests)

@@ -54,6 +54,10 @@ struct atom {
   union atom_value value;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct atom *atom_nil(void);
 struct atom *atom_true(void);
 
@@ -85,5 +89,9 @@ const char *atom_type_to_string(enum AtomType type);
 void atom_mark(struct atom *atom);
 
 struct atom *new_atom_error(struct atom *cause, const char *message, ...);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif  // _QUANTA_ATOM_H
