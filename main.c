@@ -82,8 +82,12 @@ int main(int argc, char *argv[]) {
     gc_run();
   }
 
+  int rc = 0;
+
   if (source_file_eof(source)) {
     printf("End of input.\n");
+  } else {
+    rc = 1;
   }
 
   source_file_free(source);
@@ -102,5 +106,5 @@ int main(int argc, char *argv[]) {
   }
 
   close(log_fd);
-  return 0;
+  return rc;
 }
