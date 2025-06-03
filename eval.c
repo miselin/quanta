@@ -17,8 +17,7 @@ struct atom *eval(struct atom *atom, struct environment *env) {
   if (atom->type == ATOM_TYPE_SYMBOL) {
     struct atom *value = env_lookup(env, atom);
     if (!value) {
-      fprintf(stderr, "Error: unbound symbol '%s'\n", atom->value.string.ptr);
-      return NULL;
+      return new_atom_error(atom, "unbound symbol");
     }
 
     return value;
@@ -30,15 +29,13 @@ struct atom *eval(struct atom *atom, struct environment *env) {
     struct atom *cdr = atom->value.cons.cdr;
 
     struct atom *fn = eval(car, env);
-    if (!fn) {
-      fprintf(stderr, "Error evaluating function\n");
-      return NULL;
+    if (is_error(fn)) {
+      return fn;
     }
 
     struct atom *args = fn->type == ATOM_TYPE_SPECIAL ? cdr : eval_list(cdr, env);
-    if (!args) {
-      fprintf(stderr, "Error evaluating arguments\n");
-      return NULL;
+    if (is_error(args)) {
+      return args;
     }
 
     // TODO: tail-recursion optimization (iterative evaluation instead of recursive)
@@ -59,9 +56,8 @@ static struct atom *eval_list(struct atom *atom, struct environment *env) {
 
   while (atom && atom->type == ATOM_TYPE_CONS) {
     struct atom *evaled = eval(car(atom), env);
-    if (!evaled) {
-      fprintf(stderr, "Error evaluating list element\n");
-      return NULL;
+    if (is_error(evaled)) {
+      return evaled;
     }
 
     struct atom *cons = new_cons(evaled, NULL);
@@ -78,8 +74,7 @@ static struct atom *eval_list(struct atom *atom, struct environment *env) {
   }
 
   if (atom && atom->type != ATOM_TYPE_NIL) {
-    fprintf(stderr, "Error: expected a list, got something else\n");
-    return NULL;  // error handling
+    return new_atom_error(atom, "expected a list, got something else");
   }
 
   if (tail) {
@@ -96,8 +91,7 @@ struct atom *apply(struct atom *fn, struct atom *args, struct environment *env) 
     // Call the internal function - no environment cloning needed
     return fn->value.primitive(args, env);
   } else if (fn->type != ATOM_TYPE_LAMBDA) {
-    fprintf(stderr, "Error: expected a function, got %d\n", fn->type);
-    return NULL;
+    return new_atom_error(fn, "expected a function, got a %s", atom_type_to_string(fn->type));
   }
 
   struct environment *parent_env = env;
@@ -111,8 +105,7 @@ struct atom *apply(struct atom *fn, struct atom *args, struct environment *env) 
   struct atom *current_args = args;
   while (binding_list && binding_list->type == ATOM_TYPE_CONS) {
     if (!current_args || current_args->type != ATOM_TYPE_CONS) {
-      fprintf(stderr, "Error: not enough arguments for lambda function\n");
-      return NULL;
+      break;
     }
 
     struct atom *param = car(binding_list);
@@ -126,20 +119,14 @@ struct atom *apply(struct atom *fn, struct atom *args, struct environment *env) 
   }
 
   if (binding_list && binding_list->type != ATOM_TYPE_NIL) {
-    fprintf(stderr, "Error: not enough parameters for function\n");
-    return NULL;
+    return new_atom_error(fn, "not enough arguments provided for function '%s'",
+                          fn->value.lambda.args->value.string.ptr);
   }
 
   if (current_args && current_args->type != ATOM_TYPE_NIL) {
-    fprintf(stderr, "Error: too many parameters for function\n");
-    return NULL;
+    return new_atom_error(fn, "too many arguments provided for function '%s'",
+                          fn->value.lambda.args->value.string.ptr);
   }
 
-  struct atom *result = eval(fn->value.lambda.body, env);
-  if (!result) {
-    fprintf(stderr, "Error evaluating lambda body\n");
-    return NULL;
-  }
-
-  return result;
+  return eval(fn->value.lambda.body, env);
 }

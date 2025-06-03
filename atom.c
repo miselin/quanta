@@ -34,8 +34,7 @@ struct atom *new_atom(enum AtomType type, union atom_value value) {
 
 struct atom *new_cons(struct atom *car, struct atom *cdr) {
   if (!car && !cdr) {
-    fprintf(stderr, "Error: 'cons' requires at least one of car or cdr to be non-null\n");
-    return NULL;
+    return new_atom_error(NULL, "'cons' requires at least one of car or cdr to be non-null");
   }
 
   if (!car) {
@@ -61,36 +60,43 @@ void erase_atom(struct atom *atom) {
     case ATOM_TYPE_KEYWORD:
       free(atom->value.string.ptr);
       break;
+    case ATOM_TYPE_ERROR:
+      free(atom->value.error.message);
+      break;
     default:
       break;
   }
 }
 
 struct atom *car(struct atom *atom) {
+  if (is_error(atom)) {
+    return atom;
+  }
+
   if (atom->type != ATOM_TYPE_CONS) {
-    fprintf(stderr, "Error: 'car' requires a non-empty list\n");
-    return NULL;
+    return new_atom_error(atom, "'car' requires a non-empty list");
   }
 
   struct atom *result = atom->value.cons.car;
   if (!result) {
-    fprintf(stderr, "Error: 'car' called on an empty list\n");
-    return NULL;
+    return new_atom_error(atom, "'car' called on an empty list");
   }
 
   return result;
 }
 
 struct atom *cdr(struct atom *atom) {
+  if (is_error(atom)) {
+    return atom;
+  }
+
   if (atom->type != ATOM_TYPE_CONS) {
-    fprintf(stderr, "Error: 'cdr' requires a non-empty list\n");
-    return NULL;
+    return new_atom_error(atom, "'cdr' requires a non-empty list");
   }
 
   struct atom *result = atom->value.cons.cdr;
   if (!result) {
-    fprintf(stderr, "Error: 'cdr' called on an empty list\n");
-    return NULL;
+    return new_atom_error(atom, "'cdr' called on an empty list");
   }
 
   return result;
@@ -134,6 +140,37 @@ int is_basic_type(struct atom *atom) {
                   atom->type == ATOM_TYPE_TRUE);
 }
 
+int is_error(struct atom *atom) {
+  return atom && atom->type == ATOM_TYPE_ERROR;
+}
+
+const char *atom_type_to_string(enum AtomType type) {
+  switch (type) {
+    case ATOM_TYPE_NIL:
+      return "NIL";
+    case ATOM_TYPE_TRUE:
+      return "TRUE";
+    case ATOM_TYPE_INT:
+      return "INT";
+    case ATOM_TYPE_FLOAT:
+      return "FLOAT";
+    case ATOM_TYPE_STRING:
+      return "STRING";
+    case ATOM_TYPE_SYMBOL:
+      return "SYMBOL";
+    case ATOM_TYPE_KEYWORD:
+      return "KEYWORD";
+    case ATOM_TYPE_CONS:
+      return "CONS";
+    case ATOM_TYPE_LAMBDA:
+      return "LAMBDA";
+    case ATOM_TYPE_ERROR:
+      return "ERROR";
+    default:
+      return "UNKNOWN";
+  }
+}
+
 void atom_mark(struct atom *atom) {
   if (!atom || atom == &g_atom_nil || atom == &g_atom_true) {
     return;
@@ -155,4 +192,32 @@ void atom_mark(struct atom *atom) {
     atom_mark(atom->value.lambda.body);
     environment_gc_mark(atom->value.lambda.env);
   }
+
+  if (atom->type == ATOM_TYPE_ERROR) {
+    atom_mark(atom->value.error.cause);
+  }
+}
+
+struct atom *new_atom_error(struct atom *cause, const char *message, ...) {
+  struct atom *atom = gc_new(GC_TYPE_ATOM, sizeof(struct atom));
+  atom->type = ATOM_TYPE_ERROR;
+  atom->value.error.cause = cause;
+
+  size_t bufsize = 256;
+  atom->value.error.message = (char *)malloc(256);
+  if (message) {
+    va_list args;
+    va_start(args, message);
+    int written = vsnprintf(atom->value.error.message, bufsize, message, args);
+    while ((size_t)written >= bufsize) {
+      bufsize = written + 1;
+      atom->value.error.message = (char *)realloc(atom->value.error.message, bufsize);
+      va_start(args, message);
+      written = vsnprintf(atom->value.error.message, bufsize, message, args);
+    }
+    va_end(args);
+  } else {
+    atom->value.error.message = NULL;
+  }
+  return atom;
 }

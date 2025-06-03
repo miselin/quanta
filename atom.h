@@ -19,6 +19,7 @@ enum AtomType {
   ATOM_TYPE_PRIMITIVE = 8,  // primitive functions
   ATOM_TYPE_SPECIAL = 9,    // special forms (e.g. if, define)
   ATOM_TYPE_LAMBDA = 10,    // user-defined functions
+  ATOM_TYPE_ERROR = 11,     // error, to propagate errors in evaluation
 };
 
 typedef struct atom *(*PrimitiveFunction)(struct atom *args, struct environment *env);
@@ -42,6 +43,10 @@ union atom_value {
     struct environment *env;
     struct atom *body;
   } lambda;
+  struct {
+    char *message;
+    struct atom *cause;
+  } error;
 };
 
 struct atom {
@@ -72,8 +77,13 @@ int is_int(struct atom *atom);
 int is_float(struct atom *atom);
 int is_true(struct atom *atom);
 int is_basic_type(struct atom *atom);
+int is_error(struct atom *atom);
+
+const char *atom_type_to_string(enum AtomType type);
 
 // Exposed for GC
 void atom_mark(struct atom *atom);
+
+struct atom *new_atom_error(struct atom *cause, const char *message, ...);
 
 #endif  // _QUANTA_ATOM_H

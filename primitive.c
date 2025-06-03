@@ -74,38 +74,33 @@ struct atom *primitive_cons(struct atom *args, struct environment *env) {
 struct atom *primitive_car(struct atom *args, struct environment *env) {
   (void)env;
 
-  if (!args) {
-    fprintf(stderr, "Error: 'car' requires a non-empty list\n");
-    return NULL;  // error handling
-  }
-
   return car(args);
 }
 
 struct atom *primitive_cdr(struct atom *args, struct environment *env) {
   (void)env;
 
-  if (!args) {
-    fprintf(stderr, "Error: 'cdr' requires a non-empty list\n");
-    return NULL;  // error handling
-  }
-
   return cdr(args);
 }
 
-int check_arithmetic_args(struct atom *args) {
+static int check_arithmetic_args(struct atom *args, struct atom **error) {
   struct atom *first_arg = car(args);
   enum AtomType type = first_arg->type;
+
+  *error = NULL;
 
   args = cdr(args);
   while (args && args->type == ATOM_TYPE_CONS) {
     struct atom *arg = car(args);
     if (arg->type != type) {
-      fprintf(stderr,
-              "Error: arithmetic operations require all arguments to be of the same type\n");
+      *error = new_atom_error(first_arg,
+                              "arithmetic operations require all arguments to be of the same type, "
+                              "expected %s, got %s",
+                              atom_type_to_string(type), atom_type_to_string(arg->type));
       return 0;
     } else if (arg->type != ATOM_TYPE_INT && arg->type != ATOM_TYPE_FLOAT) {
-      fprintf(stderr, "Error: arithmetic operations only support integers and floats\n");
+      *error = new_atom_error(arg, "arithmetic operations only support integers and floats, got %s",
+                              atom_type_to_string(arg->type));
       return 0;
     }
     args = cdr(args);
@@ -147,8 +142,9 @@ struct atom *farithmetic(struct atom *args, FArithmeticFunction func) {
 struct atom *primitive_add(struct atom *args, struct environment *env) {
   (void)env;
 
-  if (!check_arithmetic_args(args)) {
-    return NULL;
+  struct atom *error = NULL;
+  if (!check_arithmetic_args(args, &error)) {
+    return error;
   }
 
   if (car(args)->type == ATOM_TYPE_INT) {
@@ -156,16 +152,17 @@ struct atom *primitive_add(struct atom *args, struct environment *env) {
   } else if (car(args)->type == ATOM_TYPE_FLOAT) {
     return farithmetic(args, fadd);
   } else {
-    fprintf(stderr, "Error: '+' only supports integers and floats\n");
-    return NULL;
+    return new_atom_error(car(args), "Error: '+' only supports integers and floats, got %s",
+                          atom_type_to_string(car(args)->type));
   }
 }
 
 struct atom *primitive_subtract(struct atom *args, struct environment *env) {
   (void)env;
 
-  if (!check_arithmetic_args(args)) {
-    return NULL;
+  struct atom *error = NULL;
+  if (!check_arithmetic_args(args, &error)) {
+    return error;
   }
 
   if (car(args)->type == ATOM_TYPE_INT) {
@@ -173,16 +170,17 @@ struct atom *primitive_subtract(struct atom *args, struct environment *env) {
   } else if (car(args)->type == ATOM_TYPE_FLOAT) {
     return farithmetic(args, fsub);
   } else {
-    fprintf(stderr, "Error: '-' only supports integers and floats\n");
-    return NULL;
+    return new_atom_error(car(args), "Error: '-' only supports integers and floats, got %s",
+                          atom_type_to_string(car(args)->type));
   }
 }
 
 struct atom *primitive_multiply(struct atom *args, struct environment *env) {
   (void)env;
 
-  if (!check_arithmetic_args(args)) {
-    return NULL;
+  struct atom *error = NULL;
+  if (!check_arithmetic_args(args, &error)) {
+    return error;
   }
 
   if (car(args)->type == ATOM_TYPE_INT) {
@@ -190,16 +188,17 @@ struct atom *primitive_multiply(struct atom *args, struct environment *env) {
   } else if (car(args)->type == ATOM_TYPE_FLOAT) {
     return farithmetic(args, fmul);
   } else {
-    fprintf(stderr, "Error: '*' only supports integers and floats\n");
-    return NULL;
+    return new_atom_error(car(args), "Error: '*' only supports integers and floats, got %s",
+                          atom_type_to_string(car(args)->type));
   }
 }
 
 struct atom *primitive_divide(struct atom *args, struct environment *env) {
   (void)env;
 
-  if (!check_arithmetic_args(args)) {
-    return NULL;
+  struct atom *error = NULL;
+  if (!check_arithmetic_args(args, &error)) {
+    return error;
   }
 
   if (car(args)->type == ATOM_TYPE_INT) {
@@ -207,8 +206,8 @@ struct atom *primitive_divide(struct atom *args, struct environment *env) {
   } else if (car(args)->type == ATOM_TYPE_FLOAT) {
     return farithmetic(args, fdiv);
   } else {
-    fprintf(stderr, "Error: '/' only supports integers and floats\n");
-    return NULL;
+    return new_atom_error(car(args), "Error: '/' only supports integers and floats, got %s",
+                          atom_type_to_string(car(args)->type));
   }
 }
 
@@ -218,8 +217,7 @@ struct atom *primitive_equal(struct atom *args, struct environment *env) {
   // Must be two arguments
   if (!args || args->type != ATOM_TYPE_CONS || !args->value.cons.cdr ||
       args->value.cons.cdr->type != ATOM_TYPE_CONS) {
-    fprintf(stderr, "Error: '=' requires exactly two arguments\n");
-    return NULL;  // error handling
+    return new_atom_error(args, "Error: '=' requires exactly two arguments");
   }
 
   struct atom *first = car(args);
@@ -258,6 +256,7 @@ struct atom *primitive_equal(struct atom *args, struct environment *env) {
     case ATOM_TYPE_CONS:
     case ATOM_TYPE_NIL:
     case ATOM_TYPE_LAMBDA:
+    case ATOM_TYPE_ERROR:
       // Identity equality (not structural equality)
       equal = first == second;
       break;
@@ -314,8 +313,7 @@ struct atom *primitive_print(struct atom *args, struct environment *env) {
   (void)env;
 
   if (!args || args->type != ATOM_TYPE_CONS) {
-    fprintf(stderr, "Error: 'print' requires at least one argument\n");
-    return NULL;
+    return new_atom_error(args, "Error: 'print' requires at least one argument");
   }
 
   while (args && args->type == ATOM_TYPE_CONS) {
@@ -331,20 +329,18 @@ struct atom *primitive_read(struct atom *args, struct environment *env) {
   (void)env;
 
   if (!args || args->type != ATOM_TYPE_CONS || !args->value.cons.car) {
-    fprintf(stderr, "Error: 'read' requires one argument\n");
-    return NULL;
+    return new_atom_error(args, "Error: 'read' requires one argument");
   }
 
   struct atom *input = car(args);
   if (input->type != ATOM_TYPE_STRING) {
-    fprintf(stderr, "Error: 'read' argument must be a string\n");
-    return NULL;
+    return new_atom_error(input, "Error: 'read' argument must be a string");
   }
 
   struct source_file *source = source_file_str(input->value.string.ptr, input->value.string.len);
   if (!source) {
-    fprintf(stderr, "Error: could not create source from string '%s'\n", input->value.string.ptr);
-    return NULL;
+    return new_atom_error(input, "Error: could not create source from string '%s'",
+                          input->value.string.ptr);
   }
 
   struct atom *result = read_atom(source);
@@ -352,8 +348,7 @@ struct atom *primitive_read(struct atom *args, struct environment *env) {
   source_file_free(source);
 
   if (!result) {
-    fprintf(stderr, "Error: could not read from string '%s'\n", input->value.string.ptr);
-    return NULL;
+    return new_atom_error(input, "Error: could not read from string '%s'", input->value.string.ptr);
   }
 
   return result;
@@ -363,20 +358,17 @@ struct atom *primitive_readf(struct atom *args, struct environment *env) {
   (void)env;
 
   if (!args || args->type != ATOM_TYPE_CONS || !args->value.cons.car) {
-    fprintf(stderr, "Error: 'readf' requires one argument\n");
-    return NULL;
+    return new_atom_error(args, "Error: 'readf' requires one argument");
   }
 
   struct atom *input = car(args);
   if (input->type != ATOM_TYPE_STRING) {
-    fprintf(stderr, "Error: 'readf' argument must be a string\n");
-    return NULL;
+    return new_atom_error(input, "Error: 'readf' argument must be a string");
   }
 
   struct source_file *source = source_file_new(input->value.string.ptr);
   if (!source) {
-    fprintf(stderr, "Error: could not open file '%s'\n", input->value.string.ptr);
-    return NULL;
+    return new_atom_error(input, "Error: could not open file '%s'", input->value.string.ptr);
   }
 
   struct atom *result = read_atom(source);
@@ -384,8 +376,7 @@ struct atom *primitive_readf(struct atom *args, struct environment *env) {
   source_file_free(source);
 
   if (!result) {
-    fprintf(stderr, "Error: could not read from file '%s'\n", input->value.string.ptr);
-    return NULL;
+    return new_atom_error(input, "Error: could not read from file '%s'", input->value.string.ptr);
   }
 
   return result;
@@ -395,20 +386,17 @@ struct atom *primitive_read_all(struct atom *args, struct environment *env) {
   (void)env;
 
   if (!args || args->type != ATOM_TYPE_CONS || !args->value.cons.car) {
-    fprintf(stderr, "Error: 'read-all' requires one argument\n");
-    return NULL;
+    return new_atom_error(args, "Error: 'read-all' requires one argument");
   }
 
   struct atom *input = car(args);
   if (input->type != ATOM_TYPE_STRING) {
-    fprintf(stderr, "Error: 'read-all' argument must be a string\n");
-    return NULL;
+    return new_atom_error(input, "Error: 'read-all' argument must be a string");
   }
 
   struct source_file *source = source_file_new(input->value.string.ptr);
   if (!source) {
-    fprintf(stderr, "Error: could not open file '%s'\n", input->value.string.ptr);
-    return NULL;
+    return new_atom_error(input, "Error: could not open file '%s'", input->value.string.ptr);
   }
 
   struct atom *head = NULL;
@@ -417,9 +405,10 @@ struct atom *primitive_read_all(struct atom *args, struct environment *env) {
   while (!source_file_eof(source)) {
     struct atom *result = read_atom(source);
     if (!result) {
-      fprintf(stderr, "Error: could not read from file '%s'\n", input->value.string.ptr);
+      struct atom *error =
+          new_atom_error(input, "Error: could not read from file '%s'", input->value.string.ptr);
       source_file_free(source);
-      return NULL;
+      return error;
     }
 
     struct atom *cons = new_cons(result, NULL);
@@ -448,8 +437,7 @@ struct atom *primitive_read_line(struct atom *args, struct environment *env) {
   // read a single line from stdin
   char *buffer = (char *)malloc(1024);
   if (!buffer) {
-    fprintf(stderr, "Error: could not allocate memory for reading line\n");
-    return NULL;
+    return new_atom_error(NULL, "Error: could not allocate memory for reading line");
   }
 
   size_t at = 0;

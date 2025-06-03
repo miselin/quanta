@@ -52,14 +52,17 @@ int main(int argc, char *argv[]) {
     }
 
     if (source_file_eof(source)) {
-      printf("End of input.\n");
-      break;  // Exit on EOF
+      break;
     }
 
     struct atom *atom = read_atom(source);
     if (!atom) {
-      printf("End of input or error reading atom.\n");
       break;
+    }
+
+    if (is_error(atom)) {
+      fprintf(stderr, "Error reading atom: %s\n", atom->value.error.message);
+      continue;
     }
 
     struct atom *evaled = eval(atom, env);
@@ -69,10 +72,18 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
-    print(stdout, evaled);
-    printf("\n");
+    if (is_error(evaled)) {
+      fprintf(stderr, "Error: %s\n", evaled->value.error.message);
+    } else {
+      print(stdout, evaled);
+      printf("\n");
+    }
 
     gc_run();
+  }
+
+  if (source_file_eof(source)) {
+    printf("End of input.\n");
   }
 
   source_file_free(source);
