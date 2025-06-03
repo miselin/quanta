@@ -34,5 +34,6 @@ add_executable(quanta
     special.c
     source.c
     gc.c
+    lex.c
 )
 target_link_libraries(quanta PkgConfig::deps clog)

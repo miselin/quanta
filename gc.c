@@ -6,6 +6,7 @@
 #include "atom.h"
 #include "env.h"
 #include "intern.h"
+#include "lex.h"
 #include "log.h"
 #include "third_party/clog.h"
 
@@ -87,6 +88,10 @@ void gc_release(void *ptr) {
 }
 
 int gc_mark(void *ptr) {
+  if (!ptr) {
+    return 0;
+  }
+
   struct gcnode *node = gc_node(ptr);
   int marked = node->marked;
   node->marked = 1;
@@ -103,20 +108,29 @@ void gc_run(void) {
   for (struct gcroot *root = roots; root; root = root->next) {
     struct gcnode *node = root->node;
     if (node && !node->marked) {
-      if (node->type == GC_TYPE_ATOM) {
-        struct atom *atom = (struct atom *)(node + 1);
+      switch (node->type) {
+        case GC_TYPE_ATOM: {
+          struct atom *atom = (struct atom *)(node + 1);
 
-        // mark atom and its reachable parts
-        atom_mark(atom);
-      } else if (node->type == GC_TYPE_ENVIRONMENT) {
-        struct environment *env = (struct environment *)(node + 1);
+          // mark atom and its reachable parts
+          atom_mark(atom);
+        } break;
+        case GC_TYPE_ENVIRONMENT: {
+          struct environment *env = (struct environment *)(node + 1);
 
-        environment_gc_mark(env);
-      } else if (node->type == GC_TYPE_BINDING_CELL) {
-        // Should already be marked by environment marking.
-        node->marked = 1;
-      } else {
-        fprintf(stderr, "Warning: gc_run called with unsupported GC type %d", node->type);
+          environment_gc_mark(env);
+        } break;
+        case GC_TYPE_BINDING_CELL: {
+          // Should already be marked by environment marking.
+          node->marked = 1;
+        } break;
+        case GC_TYPE_TOKEN: {
+          node->marked = 1;
+        } break;
+        case GC_TYPE_LEXER: {
+          struct lex *lexer = (struct lex *)(node + 1);
+          lex_gc_mark(lexer);
+        } break;
       }
     }
   }
@@ -153,17 +167,24 @@ void gc_run(void) {
     }
 
     // Erase primitives inside the data type
-    if (node->type == GC_TYPE_ATOM) {
-      struct atom *atom = (struct atom *)(node + 1);
-      erase_atom(atom);
-    } else if (node->type == GC_TYPE_ENVIRONMENT) {
-      struct environment *env = (struct environment *)(node + 1);
-      erase_environment(env);
-    } else if (node->type == GC_TYPE_BINDING_CELL) {
-      // Nothing within a binding cell needs to be erased.
-    } else {
-      fprintf(stderr, "Warning: gc_run called with unsupported GC type for erasure %d\n",
-              node->type);
+    switch (node->type) {
+      case GC_TYPE_ATOM: {
+        struct atom *atom = (struct atom *)(node + 1);
+        erase_atom(atom);
+      } break;
+      case GC_TYPE_ENVIRONMENT: {
+        struct environment *env = (struct environment *)(node + 1);
+        erase_environment(env);
+      } break;
+      case GC_TYPE_BINDING_CELL: {
+        // Nothing within a binding cell needs to be erased.
+      } break;
+      case GC_TYPE_TOKEN: {
+        lex_gc_erase_token((struct token *)(node + 1));
+      } break;
+      case GC_TYPE_LEXER: {
+        lex_gc_erase((struct lex *)(node + 1));
+      } break;
     }
 
     struct gcnode *next = node->next;

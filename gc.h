@@ -7,6 +7,8 @@ enum GCType {
   GC_TYPE_ATOM = 0,          // Regular atom
   GC_TYPE_ENVIRONMENT = 1,   // Environment
   GC_TYPE_BINDING_CELL = 2,  // Binding cell in environment
+  GC_TYPE_TOKEN = 3,         // Lexer token
+  GC_TYPE_LEXER = 4,         // Lexer state
 };
 
 void *gc_new(enum GCType type, size_t size);

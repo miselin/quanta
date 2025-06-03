@@ -8,9 +8,10 @@
 #include "atom.h"
 #include "clog.h"
 #include "intern.h"
+#include "lex.h"
 #include "log.h"
 
-static struct atom *read_list(struct source_file *source);
+static struct atom *read_list(struct lex *lex);
 
 static void consume_whitespace(struct source_file *source) {
   char c = source_file_getc(source);
@@ -30,188 +31,75 @@ static void consume_whitespace(struct source_file *source) {
   }
 }
 
-struct atom *read_atom(struct source_file *source) {
-  // consume leading whitespace
-  consume_whitespace(source);
-
-  char c = source_file_getc(source);
-  if (c == EOF) {
-    return NULL;
+static struct atom *read_atom_lex(struct lex *lex) {
+  struct token *token = lex_next_token(lex);
+  if (!token) {
+    return new_atom_error(NULL, "could not read token from source");
+  } else if (token->type == TOKEN_ERROR) {
+    return new_atom_error(NULL, "could not read atom from source: %s", token->text);
   }
 
-  if (c == '(') {
-    // if we read a '(', we need to handle it as a list instead of an atom
-    source_file_ungetc(source, c);  // put back the '('
-    return read_list(source);
-  }
-
-  // handle certain syntactic sugars
-  if (c == '\'') {
-    // it's actually (quote atom)
-    struct atom *atom = read_atom(source);
-    if (!atom) {
-      fprintf(stderr, "Error: expected atom after '\n");
-      return NULL;  // error reading atom
-    }
-
-    struct atom *quote_atom = intern("quote", 0);
-    return new_cons(quote_atom, new_cons(atom, atom_nil()));
-  }
-
-  int is_str = 0;
-  int is_escaped = 0;
-  if (c == '"') {
-    is_str = 2;
-  }
-
-  // read the atom string
-  char buffer[256];
-  size_t buffer_length = 0;
-  while (c != EOF) {
-    if (is_str > 0) {
-      if (c == '"' && !is_escaped) {
-        // end of string
-        --is_str;
-      }
-
-      if (c == '\\') {
-        is_escaped = 1;
-      }
-
-      // all characters are valid inside a string for now
-    } else if (isspace(c) || c == '(' || c == ')' || c == ';') {
-      break;
-    }
-
-    if (buffer_length < sizeof(buffer) - 1) {
-      buffer[buffer_length++] = c;
-    }
-    c = source_file_getc(source);
-  }
-  buffer[buffer_length] = '\0';  // null-terminate the string
-
-  if (!buffer_length) {
-    fprintf(stderr, "Error: empty atom read\n");
-    return NULL;  // empty atom
-  }
-
-  clog_debug(CLOG(LOGGER_READ), "processing atom from '%s'", buffer);
-
-  if (is_str != 0) {
-    fprintf(stderr, "Error: string not terminated properly\n");
-    return NULL;
-  }
-
-  if (c != EOF) {
-    source_file_ungetc(source, c);  // put back the last character
-  }
-
-  if (!strcmp(buffer, "nil") || !strcmp(buffer, "f")) {
-    // nil
-    return atom_nil();
-  }
-
-  if (strcmp(buffer, "t") == 0) {
-    // true
-    return atom_true();
-  }
-
-  // what have we read?
-  if (buffer[0] == '"') {
-    // search for closing quote
-    size_t last = buffer_length - 1;
-    if (buffer[last] != '"') {
-      fprintf(stderr, "Error: string not terminated properly\n");
-      return NULL;  // error reading string
-    }
-
-    char *value_ptr = malloc(last);
-
-    // search for characters that require escaping
-    int is_escape = 0;
-    size_t at = 0;
-    for (size_t i = 1; i < last; i++) {
-      if (is_escape) {
-        is_escape = 0;
-
-        switch (buffer[i]) {
-          case 'n':
-            value_ptr[at++] = '\n';
-            break;
-          case 't':
-            value_ptr[at++] = '\t';
-            break;
-          case 'r':
-            value_ptr[at++] = '\r';
-            break;
-          case '"':
-            value_ptr[at++] = '"';
-            break;
-          case '\\':
-            value_ptr[at++] = '\\';
-            break;
-          default:
-            fprintf(stderr, "Error: unknown escape sequence '\\%c'\n", buffer[i]);
-            free(value_ptr);
-            return NULL;  // error reading string
+  switch (token->type) {
+    case TOKEN_EOF:
+      return NULL;
+    case TOKEN_ERROR:
+      return new_atom_error(NULL, "lexer error: %s", token->text);
+    case TOKEN_ATOM:
+      if (isdigit(token->text[0]) || (token->text[0] == '-' && isdigit(token->text[1]))) {
+        // probably an integer or float
+        char *endptr;
+        long int_value = strtol(token->text, &endptr, 10);
+        if (*endptr == '\0') {
+          // it's an integer
+          union atom_value value = {.ivalue = int_value};
+          return new_atom(ATOM_TYPE_INT, value);
+        } else {
+          // try to parse as float
+          double float_value = strtod(token->text, &endptr);
+          if (*endptr == '\0') {
+            union atom_value value = {.fvalue = float_value};
+            return new_atom(ATOM_TYPE_FLOAT, value);
+          } else {
+            return new_atom_error(NULL, "could not parse number '%s'", token->text);
+          }
         }
-      } else if (buffer[i] == '\\') {
-        is_escape = 1;
-      } else if (buffer[i] == '"') {
-        fprintf(stderr, "Error: unexpected closing quote in string\n");
-        free(value_ptr);
-        return NULL;  // error reading string
-      } else {
-        value_ptr[at++] = buffer[i];
       }
+      return intern(token->text, token->text[0] == ':');
+    case TOKEN_STRING: {
+      // TODO: handle escaped characters
+      union atom_value value = {.string = {.ptr = strdup(token->text), .len = token->length - 2}};
+      clog_debug(CLOG(LOGGER_READ), "read string: '%s'", value.string.ptr);
+      return new_atom(ATOM_TYPE_STRING, value);
     }
+    case TOKEN_LPAREN: {
+      return read_list(lex);
+    } break;
+    case TOKEN_RPAREN:
+      return new_atom_error(NULL, "unexpected right parenthesis");
+    case TOKEN_QUOTE: {
+      struct atom *atom = read_atom_lex(lex);
+      if (is_error(atom)) {
+        return atom;
+      }
 
-    value_ptr[at] = '\0';  // null-terminate the string
-
-    union atom_value value = {.string = {.ptr = value_ptr, .len = at}};
-    return new_atom(ATOM_TYPE_STRING, value);
+      struct atom *quote_atom = intern("quote", 0);
+      return new_cons(quote_atom, new_cons(atom, atom_nil()));
+    } break;
+    case TOKEN_DOT:
+      return new_atom_error(NULL, "unexpected dot in input, expected a list or atom");
   }
 
-  if (isdigit(buffer[0]) || (buffer[0] == '-' && isdigit(buffer[1]))) {
-    union atom_value value;
-
-    // integer or float
-    // TODO: need better parsing here
-    char *endptr;
-    if (strchr(buffer, '.')) {
-      // float
-      value.fvalue = strtod(buffer, &endptr);
-      return new_atom(ATOM_TYPE_FLOAT, value);
-    } else {
-      // integer
-      value.ivalue = strtoll(buffer, &endptr, 10);
-      return new_atom(ATOM_TYPE_INT, value);
-    }
-  }
-
-  return intern(buffer, buffer[0] == ':');
+  return new_atom_error(NULL, "unknown token type: %d", token->type);
 }
 
-static struct atom *read_list(struct source_file *source) {
-  char c = source_file_getc(source);
-  if (c != '(') {
-    fprintf(stderr, "Error: expected '(', got '%c'\n", c);
-    return NULL;  // error reading list
-  }
+struct atom *read_atom(struct source_file *source) {
+  struct lex *lex = lex_new(source);
 
-  consume_whitespace(source);
-  c = source_file_getc(source);
-  if (c == ')') {
-    // empty list
-    return atom_nil();
-  }
+  return read_atom_lex(lex);
+}
 
-  if (c == EOF) {
-    fprintf(stderr, "Error: unexpected end of file while reading list\n");
-    return NULL;  // error reading list
-  }
-
-  source_file_ungetc(source, c);  // put back the last character
+static struct atom *read_list(struct lex *lex) {
+  // LPAREN already consumed before this call
 
   struct atom *head = NULL;
   struct atom *prev = NULL;
@@ -219,46 +107,40 @@ static struct atom *read_list(struct source_file *source) {
   int dotted = 0;
 
   while (1) {
-    consume_whitespace(source);
-    c = source_file_getc(source);
-    if (c == ')') {
+    struct token *token = lex_peek_token(lex);
+
+    if (token->type == TOKEN_RPAREN) {
+      // consume it
+      lex_next_token(lex);
       break;
-    }
-    if (c == EOF) {
-      fprintf(stderr, "Error: unexpected end of file while reading list\n");
-      return NULL;
-    }
-
-    if (c == '.') {
-      // TODO: handle invalid syntax like '(1 . 2 . 3)'
+    } else if (token->type == TOKEN_DOT) {
       dotted = 1;
-    } else {
-      source_file_ungetc(source, c);  // put back the character we read to check
+    } else if (token->type == TOKEN_ERROR) {
+      return new_atom_error(NULL, "lexer error: %s", token->text);
+    } else if (token->type == TOKEN_EOF) {
+      return new_atom_error(NULL, "unexpected end of file while reading list");
     }
 
-    struct atom *atom = read_atom(source);
-    if (!atom) {
-      fprintf(stderr, "Error reading atom in list\n");
-      return NULL;
+    // this will actually consume the token now
+    struct atom *atom = read_atom_lex(lex);
+    if (is_error(atom)) {
+      return atom;
     }
 
     if (dotted) {
       if (!prev) {
-        fprintf(stderr, "Error: cannot have dotted pair without a previous cons cell\n");
-        return NULL;
+        return new_atom_error(atom, "cannot have dotted pair without a previous cons cell");
       }
 
       if (!is_nil(cdr(prev))) {
-        fprintf(stderr, "Error: cannot have more than one dotted pair in a list\n");
-        return NULL;
+        return new_atom_error(atom, "cannot have more than one dotted pair in a list");
       }
 
       prev->value.cons.cdr = atom;
 
-      c = source_file_getc(source);
-      if (c != ')') {
-        fprintf(stderr, "Error: expected ')', got '%c'\n", c);
-        return NULL;  // error reading list
+      token = lex_next_token(lex);  // consume the closing parenthesis
+      if (token->type != TOKEN_RPAREN) {
+        return new_atom_error(atom, "expected ')', got '%s'", token->text);
       }
 
       break;

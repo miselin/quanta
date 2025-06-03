@@ -17,7 +17,7 @@ struct atom *eval(struct atom *atom, struct environment *env) {
   if (atom->type == ATOM_TYPE_SYMBOL) {
     struct atom *value = env_lookup(env, atom);
     if (!value) {
-      return new_atom_error(atom, "unbound symbol");
+      return new_atom_error(atom, "unbound symbol '%s'", atom->value.string.ptr);
     }
 
     return value;
