@@ -17,11 +17,18 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g3 -ggdb -O0")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -O2 -g")
 
+option(COVERAGE "enable code coverage" OFF)
+
 set(ASAN OFF CACHE BOOL "Enable ASAN for memory debugging")
 
 if (ASAN)
     add_compile_options(-fsanitize=address)
     add_link_options(-fsanitize=address)
+endif ()
+
+if (COVERAGE)
+    add_compile_options(-coverage)
+    add_link_options(-coverage)
 endif ()
 
 add_subdirectory(third_party)

@@ -152,6 +152,8 @@ struct token *lex_peek_token(struct lex *lexer) {
       lexer->current_token->text = (char *)malloc(256);
       int length = read_until_terminator(lexer, '"', (char *)lexer->current_token->text, 256, 1);
       if (length < 0) {
+        free((void *)lexer->current_token->text);
+
         lexer->current_token->type = TOKEN_ERROR;
         lexer->current_token->text = strdup("error reading string literal");
         lexer->current_token->length = strlen(lexer->current_token->text);
@@ -184,7 +186,7 @@ struct token *lex_peek_token(struct lex *lexer) {
 }
 
 void lex_gc_erase(struct lex *lexer) {
-  (void)lexer;
+  lexer->current_token = NULL;
 }
 
 void lex_gc_erase_token(struct token *token) {
