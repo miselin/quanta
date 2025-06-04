@@ -9,9 +9,10 @@
 extern "C" {
 #endif
 
-void print(FILE *fp, struct atom *atom);
+void print(FILE *fp, struct atom *atom, int readably);
 
-int print_str(char *buffer, size_t buffer_size, struct atom *atom);
+// Set readably to 1 for human readable output
+int print_str(char *buffer, size_t buffer_size, struct atom *atom, int readably);
 
 #ifdef __cplusplus
 }  // extern "C"

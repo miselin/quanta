@@ -317,12 +317,50 @@ struct atom *primitive_print(struct atom *args, struct environment *env) {
   }
 
   while (args && args->type == ATOM_TYPE_CONS) {
-    print(stdout, car(args));
+    print(stdout, car(args), 1);
     printf("\n");
     args = cdr(args);
   }
 
   return atom_nil();
+}
+
+struct atom *primitive_write(struct atom *args, struct environment *env) {
+  (void)env;
+
+  if (!args || args->type != ATOM_TYPE_CONS) {
+    return new_atom_error(args, "Error: 'write' requires at least one argument");
+  }
+
+  while (args && args->type == ATOM_TYPE_CONS) {
+    print(stdout, car(args), 0);
+    printf("\n");
+    args = cdr(args);
+  }
+
+  return atom_nil();
+}
+
+struct atom *primitive_to_string(struct atom *args, struct environment *env) {
+  (void)env;
+
+  if (!args || args->type != ATOM_TYPE_CONS) {
+    return new_atom_error(args, "Error: 'to-string' requires at least one argument");
+  }
+
+  struct atom *arg = car(args);
+  if (cdr(args) != atom_nil()) {
+    return new_atom_error(args, "Error: 'to-string' requires exactly one argument");
+  }
+
+  char *buf = (char *)malloc(1024);
+  if (print_str(buf, 1024, arg, 0) <= 0) {
+    free(buf);
+    return new_atom_error(arg, "Error: could not convert atom to string");
+  }
+
+  union atom_value value = {.string = {.ptr = buf, .len = strlen(buf)}};
+  return new_atom(ATOM_TYPE_STRING, value);
 }
 
 struct atom *primitive_read(struct atom *args, struct environment *env) {
@@ -474,6 +512,8 @@ void init_primitives(struct environment *env) {
   env_bind(env, intern("apply", 0), primitive_function(primitive_apply));
   env_bind(env, intern("eval", 0), primitive_function(primitive_eval));
   env_bind(env, intern("print", 0), primitive_function(primitive_print));
+  env_bind(env, intern("write", 0), primitive_function(primitive_write));
+  env_bind(env, intern("to-string", 0), primitive_function(primitive_to_string));
   env_bind(env, intern("read", 0), primitive_function(primitive_read));
   env_bind(env, intern("readf", 0), primitive_function(primitive_readf));
   env_bind(env, intern("read-all", 0), primitive_function(primitive_read_all));

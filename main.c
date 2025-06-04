@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Error: %s\n", evaled->value.error.message);
     } else if (is_interactive) {
       // Print the evaluated result, but only in interactive mode
-      print(stdout, evaled);
+      print(stdout, evaled, 0);
       printf("\n");
     }
 
