@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(quanta C)
 
+include(CTest)
 include(FetchContent)
 
 find_package(PkgConfig REQUIRED)
