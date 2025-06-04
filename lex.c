@@ -88,11 +88,37 @@ static int read_until_terminator(struct lex *lexer, char terminator, char *buffe
   while (c != EOF && (escape || c != terminator)) {
     if (escape) {
       escape = 0;
+
+      // convert character if required
+      switch (c) {
+        case 'n':
+          c = '\n';
+          break;
+        case 't':
+          c = '\t';
+          break;
+        case 'r':
+          c = '\r';
+          break;
+        case 'b':
+          c = '\b';
+          break;
+        case 'f':
+          c = '\f';
+          break;
+        case '\\':
+        case '"':
+          // keep the character as is
+          break;
+        default:
+          // unknown escape sequence, treat it as a literal backslash
+          c = '\\';
+      }
     } else if (c == '\\' && allow_escaping) {
       escape = 1;
     }
 
-    if ((size_t)at < buffer_size - 1) {
+    if (!escape && (size_t)at < buffer_size - 1) {
       buffer[at++] = c;
     }
     c = source_file_getc(lexer->source);
