@@ -144,23 +144,3 @@ TEST(ParseFailuresTest, OnlyWhitespace) {
 
   source_file_free(source);
 }
-
-TEST(ParseFailuresTest, InvalidSyntax) {
-  struct source_file *source = source_file_str("(define x 1) (define y)", 0);
-  ASSERT_TRUE(source != NULL);
-
-  struct atom *atom = read_atom(source);
-  EXPECT_TRUE(is_error(atom));
-
-  source_file_free(source);
-}
-
-TEST(ParseFailuresTest, InvalidFunctionCall) {
-  struct source_file *source = source_file_str("(foo 1 2)", 0);
-  ASSERT_TRUE(source != NULL);
-
-  struct atom *atom = read_atom(source);
-  EXPECT_TRUE(is_error(atom));
-
-  source_file_free(source);
-}

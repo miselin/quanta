@@ -64,6 +64,13 @@ static struct atom *read_atom_lex(struct lex *lex) {
           }
         }
       }
+
+      if (!strcmp(token->text, "nil")) {
+        return atom_nil();
+      } else if (!strcmp(token->text, "t")) {
+        return atom_true();
+      }
+
       return intern(token->text, token->text[0] == ':');
     case TOKEN_STRING: {
       // TODO: handle escaped characters

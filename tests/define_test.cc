@@ -72,9 +72,8 @@ TEST(DefineTests, MutableBindings) {
 TEST(DefineTests, RecursiveFunction) {
   struct source_file *source = source_file_str(
       "(defun factorial (n) "
-      "  (if (eq? n 0) "
-      "      1 "
-      "      (* n (factorial (- n 1)))))"
+      "  (cond ((eq? n 0) 1) "
+      "        (t (* n (factorial (- n 1))))))"
       "\n(factorial 5)",
       0);
   ASSERT_TRUE(source != NULL);
