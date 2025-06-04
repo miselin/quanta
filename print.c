@@ -36,6 +36,8 @@ void print(FILE *fp, struct atom *atom) {
 
   fputs(buffer, fp);
   free(buffer);
+
+  fflush(fp);
 }
 
 int print_str(char *buffer, size_t buffer_size, struct atom *atom) {

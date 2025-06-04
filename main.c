@@ -21,6 +21,8 @@ int main(int argc, char *argv[]) {
   gc_init();
   init_intern_tables();
 
+  int is_interactive = 1;
+
   struct source_file *source = NULL;
   if (argc > 1) {
     source = source_file_new(argv[1]);
@@ -28,6 +30,8 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Error: could not open source file '%s'\n", argv[1]);
       return 1;
     }
+
+    is_interactive = 0;
   } else {
     source = source_file_stdin();
   }
@@ -36,8 +40,6 @@ int main(int argc, char *argv[]) {
   gc_retain(env);
 
   clog_debug(CLOG(LOGGER_MAIN), "REPL: using environment %p", (void *)env);
-
-  int is_interactive = isatty(STDIN_FILENO);
 
   while (1) {
     if (is_interactive) {
@@ -68,7 +70,8 @@ int main(int argc, char *argv[]) {
 
     if (is_error(evaled)) {
       fprintf(stderr, "Error: %s\n", evaled->value.error.message);
-    } else {
+    } else if (is_interactive) {
+      // Print the evaluated result, but only in interactive mode
       print(stdout, evaled);
       printf("\n");
     }
