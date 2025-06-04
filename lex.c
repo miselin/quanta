@@ -16,22 +16,63 @@ struct lex {
   struct token eof;
 };
 
-static void lex_consume_whitespace(struct lex *lexer) {
-  char c = source_file_getc(lexer->source);
-  if (c == ';') {
-    // skip comments
-    while (c != EOF && c != '\n') {
-      c = source_file_getc(lexer->source);
-    }
+static const char *token_type_to_string(enum Token type) {
+  switch (type) {
+    case TOKEN_EOF:
+      return "EOF";
+    case TOKEN_ERROR:
+      return "ERROR";
+    case TOKEN_ATOM:
+      return "ATOM";
+    case TOKEN_STRING:
+      return "STRING";
+    case TOKEN_LPAREN:
+      return "LPAREN";
+    case TOKEN_RPAREN:
+      return "RPAREN";
+    case TOKEN_QUOTE:
+      return "QUOTE";
+    case TOKEN_DOT:
+      return "DOT";
+    default:
+      return "UNKNOWN";
   }
+}
 
-  while (c != EOF && isspace(c)) {
-    c = source_file_getc(lexer->source);
+static void lex_consume_whitespace(struct lex *lexer) {
+  size_t n = 0;
+  char c = 0;
+
+  c = source_file_getc(lexer->source);
+  while (c != EOF) {
+    size_t prev_n = n;
+
+    clog_debug(CLOG(LOGGER_LEX), "lex_consume_whitespace: read character '%c'", c);
+    if (c == ';') {
+      // skip comments
+      while (c != EOF && c != '\n') {
+        clog_debug(CLOG(LOGGER_LEX), "lex_consume_whitespace: skipping comment character '%c'", c);
+        c = source_file_getc(lexer->source);
+        ++n;
+      }
+    }
+
+    while (c != EOF && isspace(c)) {
+      clog_debug(CLOG(LOGGER_LEX), "lex_consume_whitespace: skipping whitespace character '%c'", c);
+      c = source_file_getc(lexer->source);
+      ++n;
+    }
+
+    if (n == prev_n) {
+      break;
+    }
   }
 
   if (c != EOF) {
     source_file_ungetc(lexer->source, c);
   }
+
+  clog_debug(CLOG(LOGGER_LEX), "lex_consume_whitespace: consumed %zu whitespace characters", n);
 }
 
 // returns 1 if the character terminates an atom, 0 otherwise
@@ -101,6 +142,8 @@ struct token *lex_next_token(struct lex *lexer) {
 
   struct token *result = lexer->current_token;
   lexer->current_token = NULL;
+  clog_debug(CLOG(LOGGER_LEX), "lex_next_token: %s %s", token_type_to_string(result->type),
+             result->text ? result->text : "NULL");
   return result;
 }
 
@@ -181,6 +224,10 @@ struct token *lex_peek_token(struct lex *lexer) {
         lexer->current_token->length = length;
       }
   }
+
+  clog_debug(CLOG(LOGGER_LEX), "lex_peek_token: %s %s",
+             token_type_to_string(lexer->current_token->type),
+             lexer->current_token->text ? lexer->current_token->text : "NULL");
 
   return lexer->current_token;
 }

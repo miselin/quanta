@@ -115,6 +115,9 @@ static struct atom *read_list(struct lex *lex) {
       break;
     } else if (token->type == TOKEN_DOT) {
       dotted = 1;
+
+      // consume the dot so the atom read collects the correct next atom instead of the dot
+      lex_next_token(lex);
     } else if (token->type == TOKEN_ERROR) {
       return new_atom_error(NULL, "lexer error: %s", token->text);
     } else if (token->type == TOKEN_EOF) {

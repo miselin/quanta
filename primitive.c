@@ -114,7 +114,7 @@ struct atom *iarithmetic(struct atom *args, IArithmeticFunction func) {
   int64_t value = first_arg->value.ivalue;
 
   args = cdr(args);
-  while (args) {
+  while (!is_nil(args)) {
     struct atom *arg = car(args);
     value = func(value, arg->value.ivalue);
     args = cdr(args);
@@ -129,7 +129,7 @@ struct atom *farithmetic(struct atom *args, FArithmeticFunction func) {
   double value = first_arg->value.ivalue;
 
   args = cdr(args);
-  while (args) {
+  while (!is_nil(args)) {
     struct atom *arg = car(args);
     value = func(value, arg->value.ivalue);
     args = cdr(args);
@@ -291,7 +291,7 @@ struct atom *primitive_apply(struct atom *args, struct environment *env) {
   // TODO: checks etc
 
   struct atom *fn = car(args);
-  struct atom *arguments = cdr(args);
+  struct atom *arguments = car(cdr(args));
 
   return apply(fn, arguments, env);
 }
