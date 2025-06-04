@@ -91,8 +91,6 @@ TEST(AtomTest, StringAtom) {
   struct source_file *source = source_file_str("\"atom\"", 0);
   ASSERT_TRUE(source != NULL);
 
-  struct environment *env = create_default_environment();
-
   struct atom *atom = read_atom(source);
   EXPECT_TRUE(is_string(atom));
   EXPECT_STREQ(atom->value.string.ptr, "atom");
@@ -103,8 +101,6 @@ TEST(AtomTest, StringAtom) {
 TEST(AtomTest, EscapedStringAtom) {
   struct source_file *source = source_file_str("\"at\\\"om\"", 0);
   ASSERT_TRUE(source != NULL);
-
-  struct environment *env = create_default_environment();
 
   struct atom *atom = read_atom(source);
   EXPECT_TRUE(is_string(atom));

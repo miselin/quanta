@@ -23,10 +23,7 @@ endif ()
 
 add_subdirectory(third_party)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic -Werror -Wno-unused-function")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g3 -ggdb -O0")
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -O2 -g")
+add_compile_options(-Wall -Wextra -pedantic -Werror -Wno-unused-function)
 
 if (COVERAGE)
     add_compile_options(-coverage)
