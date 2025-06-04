@@ -19,3 +19,42 @@ TEST(ArithmeticTest, Add) {
 
   source_file_free(source);
 }
+
+TEST(ArithmeticTest, Subtract) {
+  struct source_file *source = source_file_str("(- 5 2)", 0);
+  ASSERT_TRUE(source != NULL);
+
+  struct environment *env = create_default_environment();
+
+  struct atom *atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_int(atom));
+  EXPECT_EQ(atom->value.ivalue, 3);
+
+  source_file_free(source);
+}
+
+TEST(ArithmeticTest, Multiply) {
+  struct source_file *source = source_file_str("(* 3 4)", 0);
+  ASSERT_TRUE(source != NULL);
+
+  struct environment *env = create_default_environment();
+
+  struct atom *atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_int(atom));
+  EXPECT_EQ(atom->value.ivalue, 12);
+
+  source_file_free(source);
+}
+
+TEST(ArithmeticTest, Divide) {
+  struct source_file *source = source_file_str("(/ 8 2)", 0);
+  ASSERT_TRUE(source != NULL);
+
+  struct environment *env = create_default_environment();
+
+  struct atom *atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_int(atom));
+  EXPECT_EQ(atom->value.ivalue, 4);
+
+  source_file_free(source);
+}

@@ -68,3 +68,26 @@ TEST(DefineTests, MutableBindings) {
 
   source_file_free(source);
 }
+
+TEST(DefineTests, RecursiveFunction) {
+  struct source_file *source = source_file_str(
+      "(defun factorial (n) "
+      "  (if (eq? n 0) "
+      "      1 "
+      "      (* n (factorial (- n 1)))))"
+      "\n(factorial 5)",
+      0);
+  ASSERT_TRUE(source != NULL);
+
+  struct environment *env = create_default_environment();
+
+  struct atom *atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_symbol(atom));
+  EXPECT_STREQ(atom->value.string.ptr, "factorial");
+
+  atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_int(atom));
+  EXPECT_EQ(atom->value.ivalue, 120);
+
+  source_file_free(source);
+}

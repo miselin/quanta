@@ -19,3 +19,17 @@ TEST(ConditionalsTest, Equality) {
 
   source_file_free(source);
 }
+
+TEST(ConditionalsTest, NestedConditions) {
+  struct source_file *source =
+      source_file_str("(cond ((eq? 'a 'b) 1) ((eq? 'a 'a) (cond ((eq? 'x 'y) 2) (t 3))) (t 4))", 0);
+  ASSERT_TRUE(source != NULL);
+
+  struct environment *env = create_default_environment();
+
+  struct atom *atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_int(atom));
+  EXPECT_EQ(atom->value.ivalue, 3);
+
+  source_file_free(source);
+}
