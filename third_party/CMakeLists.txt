@@ -24,15 +24,3 @@ FetchContent_Declare(
   URL https://github.com/google/benchmark/archive/refs/tags/v1.9.1.zip
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
-
-set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
-set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
-
-FetchContent_MakeAvailable(benchmark)
-
-FetchContent_Declare(
-  glm
-  URL https://github.com/g-truc/glm/archive/refs/tags/1.0.1.zip
-)
-
-FetchContent_MakeAvailable(benchmark)
