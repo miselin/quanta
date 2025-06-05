@@ -1,11 +1,8 @@
 #include "log.h"
 
+#include <clog.h>
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
-
-#include "third_party/clog.h"
 
 static int log_fd = -1;
 

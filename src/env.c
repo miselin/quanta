@@ -1,5 +1,6 @@
 #include "env.h"
 
+#include <clog.h>
 #include <glib-2.0/glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,7 +10,6 @@
 #include "log.h"
 #include "primitive.h"
 #include "special.h"
-#include "third_party/clog.h"
 
 struct binding_cell {
   struct atom *atom;

@@ -1,5 +1,6 @@
 #include "gc.h"
 
+#include <clog.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -8,7 +9,6 @@
 #include "intern.h"
 #include "lex.h"
 #include "log.h"
-#include "third_party/clog.h"
 
 struct gcnode {
   enum GCType type;

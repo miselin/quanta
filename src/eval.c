@@ -1,15 +1,14 @@
 #include "eval.h"
 
+#include <clog.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "atom.h"
 #include "env.h"
 #include "eval.h"
-#include "gc.h"
 #include "log.h"
 #include "print.h"
-#include "third_party/clog.h"
 
 static const int ENABLE_TCO = 1;
 

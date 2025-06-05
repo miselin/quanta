@@ -1,3 +1,4 @@
+#include <clog.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -13,7 +14,6 @@
 #include "print.h"
 #include "read.h"
 #include "source.h"
-#include "third_party/clog.h"
 
 int main(int argc, char *argv[]) {
   logging_init(1);

@@ -1,5 +1,6 @@
 #include "lex.h"
 
+#include <clog.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,7 +9,6 @@
 #include "gc.h"
 #include "log.h"
 #include "source.h"
-#include "third_party/clog.h"
 
 struct lex {
   struct source_file *source;

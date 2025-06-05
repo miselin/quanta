@@ -1,12 +1,12 @@
 #include "intern.h"
 
+#include <clog.h>
 #include <glib-2.0/glib.h>
 #include <stdio.h>
 
 #include "atom.h"
 #include "gc.h"
 #include "log.h"
-#include "third_party/clog.h"
 
 static GHashTable *symbol_table = NULL;
 static GHashTable *keyword_table = NULL;
