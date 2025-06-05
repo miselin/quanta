@@ -58,4 +58,12 @@ TEST(EvalTest, EvalPerformsTCO) {
   EXPECT_EQ(atom->value.ivalue, 50005000);
 
   source_file_free(source);
+
+  size_t freed = gc_run();
+
+  // If this is working, the final GC should have not freed too much memory
+  // If TCO is disabled, eval() doesn't run GC (and this test will use multiple MB of memory)
+  // If TCO is enabled but GC retains too much (e.g. buggy GC, or too many temporary roots), we'll
+  // also use too much.
+  EXPECT_LE(freed, 0x10000);
 }

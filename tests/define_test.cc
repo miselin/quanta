@@ -32,6 +32,7 @@ TEST(DefineTests, Closures) {
   ASSERT_TRUE(source != NULL);
 
   struct environment *env = create_default_environment();
+  gc_retain(env);
 
   struct atom *atom = eval(read_atom(source), env);
   EXPECT_TRUE(is_symbol(atom));
@@ -44,6 +45,8 @@ TEST(DefineTests, Closures) {
   atom = eval(read_atom(source), env);
   EXPECT_TRUE(is_int(atom));
   EXPECT_EQ(atom->value.ivalue, 15);
+
+  gc_release(env);
 
   source_file_free(source);
 }

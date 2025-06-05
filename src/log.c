@@ -6,7 +6,7 @@
 
 static int log_fd = -1;
 
-void logging_init(int to_file) {
+void logging_init(int to_file, int min_level) {
   int fd = 2;
   if (to_file) {
     unlink("quanta.log");
@@ -16,7 +16,7 @@ void logging_init(int to_file) {
 
   for (size_t i = 0; i < LOGGER_COUNT; ++i) {
     clog_init_fd(i, fd);
-    clog_set_level(i, CLOG_INFO);
+    clog_set_level(i, min_level);
   }
 }
 

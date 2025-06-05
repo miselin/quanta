@@ -7,6 +7,7 @@
 #include "atom.h"
 #include "env.h"
 #include "eval.h"
+#include "gc.h"
 #include "log.h"
 #include "print.h"
 
@@ -19,12 +20,23 @@ static struct atom *eval_list(struct atom *list, struct environment *env);
 static struct atom *bind_arguments(struct environment *env, struct atom *binding_list,
                                    struct atom *args);
 
+// Used to track shadow stack for roots in functions like eval_list
+struct shadow_root {
+  struct atom *atom;
+  struct shadow_root *next;
+};
+
 struct atom *eval(struct atom *atom, struct environment *env) {
   static char buf[1024];
-  print_str(buf, 1024, atom, 0);
-  clog_debug(CLOG(LOGGER_EVAL), "eval: %s", buf);
+
+  size_t iter = 0;
 
   while (1) {
+    print_str(buf, 1024, atom, 0);
+    clog_debug(CLOG(LOGGER_EVAL), "eval [%zu]: %p %s", iter, (void *)atom, buf);
+
+    ++iter;
+
     if (!atom || is_basic_type(atom)) {
       return atom;
     }
@@ -56,10 +68,19 @@ struct atom *eval(struct atom *atom, struct environment *env) {
         return apply(fn, args, env);
       }
 
+      // run GC before TCO loop to avoid unbounded memory growth
+      // this also averages out to better performance as the stop-the-world is shorter
+      gc_retain(args);
+      gc_retain(fn);
+      gc_run();
+
       // tail-call optimization - iteratively evaluate so we don't recurse
       atom = fn->value.lambda.body;
       env = create_environment(fn->value.lambda.env);
       bind_arguments(env, fn->value.lambda.args, args);
+
+      gc_release(args);
+      gc_release(fn);
       continue;
     }
 
@@ -68,20 +89,40 @@ struct atom *eval(struct atom *atom, struct environment *env) {
 }
 
 static struct atom *eval_list(struct atom *atom, struct environment *env) {
+  static char buf[1024];
+
   if (atom->type != ATOM_TYPE_CONS) {
     return atom;
   }
 
+  print_str(buf, 1024, atom, 0);
+  clog_debug(CLOG(LOGGER_EVAL), "eval_list: %p %s", (void *)atom, buf);
+
   struct atom *head = NULL;
   struct atom *tail = NULL;
 
-  while (atom && atom->type == ATOM_TYPE_CONS) {
+  struct shadow_root *shadow = NULL;
+
+  while (is_cons(atom)) {
+    // Preserve the atom across GC runs (eval might trigger GC in TCO)
+    gc_retain(atom);
+
     struct atom *evaled = eval(car(atom), env);
+
+    gc_release(atom);
+
     if (is_error(evaled)) {
       return evaled;
     }
 
     struct atom *cons = new_cons(evaled, NULL);
+
+    // retain the generated cons for the duration of eval_list
+    gc_retain(cons);
+    struct shadow_root *new_shadow = malloc(sizeof(struct shadow_root));
+    new_shadow->atom = cons;
+    new_shadow->next = shadow;
+    shadow = new_shadow;
 
     if (!head) {
       head = cons;
@@ -91,6 +132,7 @@ static struct atom *eval_list(struct atom *atom, struct environment *env) {
       tail = cons;
     }
 
+    clog_debug(CLOG(LOGGER_EVAL), "eval_list iterating via cdr of atom %p", (void *)atom);
     atom = cdr(atom);
   }
 
@@ -102,6 +144,15 @@ static struct atom *eval_list(struct atom *atom, struct environment *env) {
     tail->value.cons.cdr = atom_nil();
   } else {
     head = atom_nil();
+  }
+
+  // release shadow roots now that we have fully evaluated the list
+  struct shadow_root *current = shadow;
+  while (current) {
+    struct shadow_root *next = current->next;
+    gc_release(current->atom);
+    free(current);
+    current = next;
   }
 
   return head;

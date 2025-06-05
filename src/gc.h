@@ -24,7 +24,8 @@ void gc_release(void *ptr);
 int gc_mark(void *ptr);
 
 void gc_init(void);
-void gc_run(void);
+// Run a full garbage collection cycle. Returns the numbe of bytes collected.
+size_t gc_run(void);
 void gc_shutdown(void);
 
 #ifdef __cplusplus

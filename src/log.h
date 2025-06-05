@@ -20,8 +20,8 @@
 extern "C" {
 #endif
 
-void logging_init(int to_file);
-void logging_shutdown();
+void logging_init(int to_file, int min_level);
+void logging_shutdown(void);
 
 #ifdef __cplusplus
 }  // extern "C"

@@ -16,7 +16,7 @@
 #include "source.h"
 
 int main(int argc, char *argv[]) {
-  logging_init(1);
+  logging_init(1, CLOG_DEBUG);
 
   gc_init();
   init_intern_tables();

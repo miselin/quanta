@@ -1,4 +1,5 @@
 #include <atom.h>
+#include <clog.h>
 #include <gc.h>
 #include <gtest/gtest.h>
 #include <intern.h>
@@ -9,7 +10,7 @@
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
 
-  logging_init(0);
+  logging_init(0, CLOG_INFO);
   gc_init();
 
   init_intern_tables();

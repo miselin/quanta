@@ -281,10 +281,13 @@ void lex_gc_mark(struct lex *lexer) {
     return;
   }
 
+  if (gc_mark(lexer)) {
+    return;
+  }
+
   if (lexer->current_token == &lexer->eof) {
     return;
   }
 
-  gc_mark(lexer);
   gc_mark(lexer->current_token);
 }

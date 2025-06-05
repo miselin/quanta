@@ -31,6 +31,23 @@ static struct gcnode *gc_node(void *ptr) {
   return (struct gcnode *)ptr - 1;
 }
 
+static const char *gc_type_to_str(enum GCType type) {
+  switch (type) {
+    case GC_TYPE_TOKEN:
+      return "token";
+    case GC_TYPE_ATOM:
+      return "atom";
+    case GC_TYPE_ENVIRONMENT:
+      return "environment";
+    case GC_TYPE_BINDING_CELL:
+      return "binding_cell";
+    case GC_TYPE_LEXER:
+      return "lexer";
+  }
+
+  return "unknown";
+}
+
 void *gc_new(enum GCType type, size_t size) {
   struct gcnode *node = malloc(sizeof(struct gcnode) + size);
   if (!node) {
@@ -57,6 +74,9 @@ void *gc_new(enum GCType type, size_t size) {
 void gc_retain(void *ptr) {
   struct gcnode *node = gc_node(ptr);
 
+  clog_debug(CLOG(LOGGER_GC), "GC: retaining %p (actual %p) of type %s", (void *)node,
+             (void *)(node + 1), gc_type_to_str(node->type));
+
   struct gcroot *new_root = malloc(sizeof(struct gcroot));
   new_root->node = node;
   new_root->next = roots;
@@ -65,6 +85,9 @@ void gc_retain(void *ptr) {
 
 void gc_release(void *ptr) {
   struct gcnode *node = gc_node(ptr);
+
+  clog_debug(CLOG(LOGGER_GC), "GC: removing root %p (actual %p) of type %s", (void *)node,
+             (void *)(node + 1), gc_type_to_str(node->type));
 
   // Find and remove the root
   struct gcroot *curr = roots;
@@ -103,11 +126,11 @@ void gc_init(void) {
   gc_tail = NULL;
 }
 
-void gc_run(void) {
+size_t gc_run(void) {
   // Mark phase
   for (struct gcroot *root = roots; root; root = root->next) {
     struct gcnode *node = root->node;
-    if (node && !node->marked) {
+    if (node) {
       switch (node->type) {
         case GC_TYPE_ATOM: {
           struct atom *atom = (struct atom *)(node + 1);
@@ -137,6 +160,13 @@ void gc_run(void) {
 
   intern_gc_mark();
 
+  size_t total_visited = 0;
+  size_t total_skipped = 0;
+  size_t total_swept = 0;
+
+  size_t total_bytes = 0;
+  size_t remaining_bytes = 0;
+
   // Sweep phase
   struct gcnode *node = gc_head;
   struct gcnode *prev = NULL;
@@ -144,16 +174,20 @@ void gc_run(void) {
     int marked = node->marked;
     node->marked = 0;
 
+    ++total_visited;
+    total_bytes += node->size;
+
     if (marked) {
-      clog_debug(CLOG(LOGGER_GC), "GC: skipping %p of type %d (marked)", (void *)node, node->type);
+      ++total_skipped;
+      remaining_bytes += node->size;
+
       // Safe.
       prev = node;
       node = node->next;
       continue;
     }
 
-    clog_debug(CLOG(LOGGER_GC), "GC: sweeping %p of type %d (not marked)", (void *)node,
-               node->type);
+    ++total_swept;
 
     // Not marked, so it's available for collection.
     if (prev) {
@@ -189,11 +223,20 @@ void gc_run(void) {
 
     struct gcnode *next = node->next;
 
-    clog_debug(CLOG(LOGGER_GC), "GC: collected %p of type %d", (void *)node, node->type);
+    clog_debug(CLOG(LOGGER_GC), "GC: collected %p (actual %p) of type %s", (void *)node,
+               (void *)(node + 1), gc_type_to_str(node->type));
     free(node);
 
     node = next;
   }
+
+  clog_debug(CLOG(LOGGER_GC), "GC: visited %zu nodes, skipped %zu, swept %zu", total_visited,
+             total_skipped, total_swept);
+  clog_info(CLOG(LOGGER_GC),
+            "GC: started with %zu total bytes allocated, retained %zu bytes, freed %zu bytes",
+            total_bytes, remaining_bytes, total_bytes - remaining_bytes);
+
+  return total_bytes - remaining_bytes;
 }
 
 void gc_shutdown(void) {

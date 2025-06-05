@@ -114,8 +114,6 @@ void env_set(struct environment *env, struct atom *symbol, struct atom *value) {
 }
 
 void environment_gc_mark(struct environment *env) {
-  GHashTableIter iter;
-  gpointer key, value;
   if (!env) {
     return;  // nothing to mark
   }
@@ -125,6 +123,8 @@ void environment_gc_mark(struct environment *env) {
     return;
   }
 
+  GHashTableIter iter;
+  gpointer key, value;
   g_hash_table_iter_init(&iter, env->bindings);
   while (g_hash_table_iter_next(&iter, &key, &value)) {
     struct binding_cell *cell = (struct binding_cell *)value;
