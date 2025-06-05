@@ -1,0 +1,6 @@
+; ensure TCO works
+(define sum (lambda (n acc)
+    (cond ((eq? n 0) acc)
+          (t (sum (- n 1) (+ n acc))))))
+
+(print (sum 10000 0))

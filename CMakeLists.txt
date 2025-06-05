@@ -24,7 +24,7 @@ endif ()
 
 add_subdirectory(third_party)
 
-add_compile_options(-Wall -Wextra -pedantic -Werror -Wno-unused-function)
+add_compile_options(-Wall -Wextra -pedantic -Werror -Wno-unused-function -Wshadow)
 
 if (COVERAGE)
     add_compile_options(-coverage)

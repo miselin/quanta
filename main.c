@@ -52,24 +52,24 @@ int main(int argc, char *argv[]) {
     }
 
     struct atom *atom = read_atom(source);
-    if (!atom) {
+    if (is_eof(atom)) {
       break;
-    }
-
-    if (is_error(atom)) {
+    } else if (is_error(atom)) {
       fprintf(stderr, "Error reading atom: %s\n", atom->value.error.message);
-      continue;
+      if (is_interactive) {
+        continue;
+      } else {
+        break;
+      }
     }
 
     struct atom *evaled = eval(atom, env);
 
-    if (!evaled) {
-      printf("Error evaluating atom.\n");
-      continue;
-    }
-
     if (is_error(evaled)) {
       fprintf(stderr, "Error: %s\n", evaled->value.error.message);
+      if (!is_interactive) {
+        break;
+      }
     } else if (is_interactive) {
       // Print the evaluated result, but only in interactive mode
       print(stdout, evaled, 0);
@@ -82,7 +82,9 @@ int main(int argc, char *argv[]) {
   int rc = 0;
 
   if (source_file_eof(source)) {
-    printf("End of input.\n");
+    if (is_interactive) {
+      printf("End of input.\n");
+    }
   } else {
     rc = 1;
   }

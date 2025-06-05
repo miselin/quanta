@@ -10,7 +10,7 @@ TEST(ParseFailuresTest, EmptyInput) {
   ASSERT_TRUE(source != NULL);
 
   struct atom *atom = read_atom(source);
-  EXPECT_TRUE(is_error(atom));
+  EXPECT_TRUE(is_eof(atom));
 
   source_file_free(source);
 }

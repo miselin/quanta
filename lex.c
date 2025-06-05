@@ -185,6 +185,11 @@ struct token *lex_peek_token(struct lex *lexer) {
 
   lex_consume_whitespace(lexer);
 
+  if (source_file_eof(lexer->source)) {
+    lexer->current_token = &lexer->eof;
+    return lexer->current_token;
+  }
+
   char c = source_file_getc(lexer->source);
   if (c == EOF) {
     lexer->current_token = &lexer->eof;

@@ -20,6 +20,7 @@ enum AtomType {
   ATOM_TYPE_SPECIAL = 9,    // special forms (e.g. if, define)
   ATOM_TYPE_LAMBDA = 10,    // user-defined functions
   ATOM_TYPE_ERROR = 11,     // error, to propagate errors in evaluation
+  ATOM_TYPE_EOF = 12,       // end of file marker
 };
 
 typedef struct atom *(*PrimitiveFunction)(struct atom *args, struct environment *env);
@@ -60,6 +61,7 @@ extern "C" {
 
 struct atom *atom_nil(void);
 struct atom *atom_true(void);
+struct atom *atom_eof(void);
 
 struct atom *new_atom(enum AtomType type, union atom_value value);
 
@@ -82,6 +84,10 @@ int is_float(struct atom *atom);
 int is_true(struct atom *atom);
 int is_basic_type(struct atom *atom);
 int is_error(struct atom *atom);
+int is_lambda(struct atom *atom);
+int is_primitive(struct atom *atom);
+int is_special(struct atom *atom);
+int is_eof(struct atom *atom);
 
 const char *atom_type_to_string(enum AtomType type);
 

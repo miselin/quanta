@@ -257,6 +257,7 @@ struct atom *primitive_equal(struct atom *args, struct environment *env) {
     case ATOM_TYPE_NIL:
     case ATOM_TYPE_LAMBDA:
     case ATOM_TYPE_ERROR:
+    case ATOM_TYPE_EOF:
       // Identity equality (not structural equality)
       equal = first == second;
       break;
@@ -511,11 +512,21 @@ void init_primitives(struct environment *env) {
   env_bind(env, intern("nil?", 0), primitive_function(primitive_nilp));
   env_bind(env, intern("apply", 0), primitive_function(primitive_apply));
   env_bind(env, intern("eval", 0), primitive_function(primitive_eval));
+
+  // (print ...) - prints atoms to stdout in a human-readable format (e.g. "\n" will emit a real
+  // newline)
   env_bind(env, intern("print", 0), primitive_function(primitive_print));
+  // (write ...) - prints atoms to stdout in a machine-readable format (e.g. "\n" will emit an
+  // literal "\n")
   env_bind(env, intern("write", 0), primitive_function(primitive_write));
+  // (to-string ...) - converts an atom to a machine-readable string representation
   env_bind(env, intern("to-string", 0), primitive_function(primitive_to_string));
+  // (read ...) - reads an atom from a string
   env_bind(env, intern("read", 0), primitive_function(primitive_read));
+  // (readf ...) - reads an atom from a file
   env_bind(env, intern("readf", 0), primitive_function(primitive_readf));
+  // (read-all ...) - reads all atoms from a file
   env_bind(env, intern("read-all", 0), primitive_function(primitive_read_all));
+  // (read-line) - reads a single line from stdin
   env_bind(env, intern("read-line", 0), primitive_function(primitive_read_line));
 }

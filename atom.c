@@ -17,12 +17,21 @@ static struct atom g_atom_true = {
     .value = {.ivalue = 1},
 };
 
+static struct atom g_atom_eof = {
+    .type = ATOM_TYPE_EOF,
+    .value = {.ivalue = 2},
+};
+
 struct atom *atom_nil(void) {
   return &g_atom_nil;
 }
 
 struct atom *atom_true(void) {
   return &g_atom_true;
+}
+
+struct atom *atom_eof(void) {
+  return &g_atom_eof;
 }
 
 struct atom *new_atom(enum AtomType type, union atom_value value) {
@@ -141,7 +150,24 @@ int is_basic_type(struct atom *atom) {
 }
 
 int is_error(struct atom *atom) {
-  return atom && atom->type == ATOM_TYPE_ERROR;
+  // EOF is a special case of error, so we include it here
+  return atom && (atom->type == ATOM_TYPE_ERROR || atom->type == ATOM_TYPE_EOF);
+}
+
+int is_lambda(struct atom *atom) {
+  return atom && atom->type == ATOM_TYPE_LAMBDA;
+}
+
+int is_primitive(struct atom *atom) {
+  return atom && atom->type == ATOM_TYPE_PRIMITIVE;
+}
+
+int is_special(struct atom *atom) {
+  return atom && atom->type == ATOM_TYPE_SPECIAL;
+}
+
+int is_eof(struct atom *atom) {
+  return atom && atom->type == ATOM_TYPE_EOF;
 }
 
 const char *atom_type_to_string(enum AtomType type) {
@@ -172,7 +198,7 @@ const char *atom_type_to_string(enum AtomType type) {
 }
 
 void atom_mark(struct atom *atom) {
-  if (!atom || atom == &g_atom_nil || atom == &g_atom_true) {
+  if (!atom || atom == &g_atom_nil || atom == &g_atom_true || atom == &g_atom_eof) {
     return;
   }
 

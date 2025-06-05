@@ -19,7 +19,7 @@ void logging_init(int to_file) {
 
   for (size_t i = 0; i < LOGGER_COUNT; ++i) {
     clog_init_fd(i, fd);
-    clog_set_level(i, CLOG_DEBUG);
+    clog_set_level(i, CLOG_INFO);
   }
 }
 

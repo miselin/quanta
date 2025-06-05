@@ -6,44 +6,66 @@
 #include "atom.h"
 #include "env.h"
 #include "eval.h"
+#include "gc.h"
+#include "log.h"
+#include "print.h"
+#include "third_party/clog.h"
 
+static const int ENABLE_TCO = 1;
+
+// Evaluates the given list and its sublists, if necessary, in the provided environment.
 static struct atom *eval_list(struct atom *list, struct environment *env);
 
+// Binds the arguments in the environment based on the binding list and the provided arguments.
+static struct atom *bind_arguments(struct environment *env, struct atom *binding_list,
+                                   struct atom *args);
+
 struct atom *eval(struct atom *atom, struct environment *env) {
-  if (!atom || is_basic_type(atom)) {
+  static char buf[1024];
+  print_str(buf, 1024, atom, 0);
+  clog_debug(CLOG(LOGGER_EVAL), "eval: %s", buf);
+
+  while (1) {
+    if (!atom || is_basic_type(atom)) {
+      return atom;
+    }
+
+    if (atom->type == ATOM_TYPE_SYMBOL) {
+      struct atom *value = env_lookup(env, atom);
+      if (!value) {
+        return new_atom_error(atom, "unbound symbol '%s'", atom->value.string.ptr);
+      }
+
+      return value;
+    }
+
+    if (atom->type == ATOM_TYPE_CONS) {
+      struct atom *eval_car = car(atom);
+      struct atom *eval_cdr = cdr(atom);
+
+      struct atom *fn = eval(eval_car, env);
+      if (is_error(fn)) {
+        return fn;
+      }
+
+      struct atom *args = fn->type == ATOM_TYPE_SPECIAL ? eval_cdr : eval_list(eval_cdr, env);
+      if (is_error(args)) {
+        return args;
+      }
+
+      if (!ENABLE_TCO || !is_lambda(fn)) {
+        return apply(fn, args, env);
+      }
+
+      // tail-call optimization - iteratively evaluate so we don't recurse
+      atom = fn->value.lambda.body;
+      env = create_environment(fn->value.lambda.env);
+      bind_arguments(env, fn->value.lambda.args, args);
+      continue;
+    }
+
     return atom;
   }
-
-  if (atom->type == ATOM_TYPE_SYMBOL) {
-    struct atom *value = env_lookup(env, atom);
-    if (!value) {
-      return new_atom_error(atom, "unbound symbol '%s'", atom->value.string.ptr);
-    }
-
-    return value;
-  }
-
-  if (atom->type == ATOM_TYPE_CONS) {
-    // Eval all the elements into a new cons cell, apply first element to the rest?
-    struct atom *car = atom->value.cons.car;
-    struct atom *cdr = atom->value.cons.cdr;
-
-    struct atom *fn = eval(car, env);
-    if (is_error(fn)) {
-      return fn;
-    }
-
-    struct atom *args = fn->type == ATOM_TYPE_SPECIAL ? cdr : eval_list(cdr, env);
-    if (is_error(args)) {
-      return args;
-    }
-
-    // TODO: tail-recursion optimization (iterative evaluation instead of recursive)
-    struct atom *result = apply(fn, args, env);
-    return result;
-  }
-
-  return atom;
 }
 
 static struct atom *eval_list(struct atom *atom, struct environment *env) {
@@ -87,10 +109,10 @@ static struct atom *eval_list(struct atom *atom, struct environment *env) {
 }
 
 struct atom *apply(struct atom *fn, struct atom *args, struct environment *env) {
-  if (fn->type == ATOM_TYPE_PRIMITIVE || fn->type == ATOM_TYPE_SPECIAL) {
+  if (is_primitive(fn) || is_special(fn)) {
     // Call the internal function - no environment cloning needed
     return fn->value.primitive(args, env);
-  } else if (fn->type != ATOM_TYPE_LAMBDA) {
+  } else if (!is_lambda(fn)) {
     return new_atom_error(fn, "expected a function, got a %s", atom_type_to_string(fn->type));
   }
 
@@ -101,32 +123,41 @@ struct atom *apply(struct atom *fn, struct atom *args, struct environment *env) 
 
   env = create_environment(parent_env);
 
-  struct atom *binding_list = fn->value.lambda.args;
-  struct atom *current_args = args;
-  while (binding_list && binding_list->type == ATOM_TYPE_CONS) {
-    if (!current_args || current_args->type != ATOM_TYPE_CONS) {
-      break;
-    }
+  struct atom *error = bind_arguments(env, fn->value.lambda.args, args);
+  if (error) {
+    return error;
+  }
 
+  return eval(fn->value.lambda.body, env);
+}
+
+static struct atom *bind_arguments(struct environment *env, struct atom *binding_list,
+                                   struct atom *args) {
+  struct atom *current_arg = args;
+  while (binding_list && binding_list->type == ATOM_TYPE_CONS) {
     struct atom *param = car(binding_list);
-    struct atom *arg = car(current_args);
+    struct atom *arg = car(current_arg);
 
     struct atom *evaled = eval(arg, env);
     env_bind(env, param, evaled);
 
     binding_list = cdr(binding_list);
-    current_args = cdr(current_args);
+    current_arg = cdr(current_arg);
+
+    if (!is_cons(current_arg)) {
+      break;
+    }
   }
 
-  if (binding_list && binding_list->type != ATOM_TYPE_NIL) {
-    return new_atom_error(fn, "not enough arguments provided for function '%s'",
-                          fn->value.lambda.args->value.string.ptr);
+  if (!is_nil(binding_list)) {
+    return new_atom_error(binding_list, "not enough arguments provided for function");
   }
 
-  if (current_args && current_args->type != ATOM_TYPE_NIL) {
-    return new_atom_error(fn, "too many arguments provided for function '%s'",
-                          fn->value.lambda.args->value.string.ptr);
+  if (!is_nil(current_arg)) {
+    return new_atom_error(current_arg, "too many arguments provided for function");
   }
 
-  return eval(fn->value.lambda.body, env);
+  // rare usage of NULL return to indicate success and simplify error propagation
+  // if (error_atom = bind_arguments(...)) { return error_atom; }}
+  return NULL;
 }
