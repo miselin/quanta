@@ -1,0 +1,3 @@
+(defun neq? (a b)
+    (cond ((eq? a b) nil)
+          (t t)))

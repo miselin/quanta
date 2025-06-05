@@ -23,6 +23,35 @@ int main(int argc, char *argv[]) {
 
   int is_interactive = 1;
 
+  struct environment *env = create_default_environment();
+  gc_retain(env);
+
+  // TODO: need a better way to find stdlib
+  struct stat st;
+  if (stat("src/stdlib.qu", &st) == 0) {
+    if (S_ISREG(st.st_mode)) {
+      struct source_file *stdlib_source = source_file_new("src/stdlib.qu");
+
+      while (!source_file_eof(stdlib_source)) {
+        struct atom *stdlib_atom = read_atom(stdlib_source);
+        if (is_eof(stdlib_atom)) {
+          break;
+        } else if (is_error(stdlib_atom)) {
+          fprintf(stderr, "Error reading stdlib: %s\n", stdlib_atom->value.error.message);
+          break;
+        }
+
+        struct atom *evaled = eval(stdlib_atom, env);
+        if (is_error(evaled)) {
+          fprintf(stderr, "Error evaluating stdlib: %s\n", evaled->value.error.message);
+          break;
+        }
+      }
+
+      source_file_free(stdlib_source);
+    }
+  }
+
   struct source_file *source = NULL;
   if (argc > 1) {
     source = source_file_new(argv[1]);
@@ -35,9 +64,6 @@ int main(int argc, char *argv[]) {
   } else {
     source = source_file_stdin();
   }
-
-  struct environment *env = create_default_environment();
-  gc_retain(env);
 
   clog_debug(CLOG(LOGGER_MAIN), "REPL: using environment %p", (void *)env);
 

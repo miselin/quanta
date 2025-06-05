@@ -1,0 +1,2 @@
+(print (neq? 0 1))
+(print (neq? 0 0))
