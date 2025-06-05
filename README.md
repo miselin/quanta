@@ -2,6 +2,10 @@
 
 Quanta is a lightweight Lisp interpreter implemented as an exercise in building interpreters.
 
+Useful discoveries and lessons that I've learned here will benefit ongoing development on my
+[Haven](http://github.com/miselin/haven) programming language, although Haven and Quanta have
+different overall goals.
+
 ## Features
 
 - **Core Lisp Semantics**:
