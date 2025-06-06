@@ -432,7 +432,12 @@ struct atom *primitive_slurp(struct atom *args, struct environment *env) {
   }
 
   char *buffer = (char *)malloc(size + 1);
-  fread(buffer, 1, size, fp);
+  if (fread(buffer, 1, size, fp) != 1) {
+    free(buffer);
+    fclose(fp);
+    return new_atom_error(input, "could not slurp '%s' - short or failed read",
+                          input->value.string.ptr);
+  }
   fclose(fp);
 
   buffer[size] = '\0';
