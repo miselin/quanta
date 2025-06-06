@@ -7,6 +7,18 @@
 #include <read.h>
 #include <source.h>
 
+TEST(PrimitivesTest, CarMustHaveOneArgument) {
+  struct source_file *source = source_file_str("(car)", 0);
+  ASSERT_TRUE(source != NULL);
+
+  struct environment *env = create_default_environment();
+
+  struct atom *atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_error(atom));
+
+  source_file_free(source);
+}
+
 TEST(PrimitivesTest, CarMustBeNonEmptyList) {
   struct source_file *source = source_file_str("(car ())", 0);
   ASSERT_TRUE(source != NULL);
@@ -31,8 +43,44 @@ TEST(PrimitivesTest, CarMustBeList) {
   source_file_free(source);
 }
 
+TEST(PrimitivesTest, CarTooMany) {
+  struct source_file *source = source_file_str("(car 1 2)", 0);
+  ASSERT_TRUE(source != NULL);
+
+  struct environment *env = create_default_environment();
+
+  struct atom *atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_error(atom));
+
+  source_file_free(source);
+}
+
 TEST(PrimitivesTest, CdrMustBeList) {
   struct source_file *source = source_file_str("(cdr 1)", 0);
+  ASSERT_TRUE(source != NULL);
+
+  struct environment *env = create_default_environment();
+
+  struct atom *atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_error(atom));
+
+  source_file_free(source);
+}
+
+TEST(PrimitivesTest, ConsNeedsArguments) {
+  struct source_file *source = source_file_str("(cons)", 0);
+  ASSERT_TRUE(source != NULL);
+
+  struct environment *env = create_default_environment();
+
+  struct atom *atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_error(atom));
+
+  source_file_free(source);
+}
+
+TEST(PrimitivesTest, ConsNeedsTwoArguments) {
+  struct source_file *source = source_file_str("(cons 1)", 0);
   ASSERT_TRUE(source != NULL);
 
   struct environment *env = create_default_environment();

@@ -64,10 +64,22 @@ static double fdiv(double a, double b) {
 struct atom *primitive_cons(struct atom *args, struct environment *env) {
   (void)env;
 
-  // TODO: check types, error handling
+  if (!is_cons(args)) {
+    return new_atom_error(args, "'cons' requires a list of two arguments");
+  }
 
-  struct atom *cell_car = car(args);
-  struct atom *cell_cdr = car(cdr(args));
+  struct atom *first = car(args);
+  struct atom *rest = cdr(args);
+  if (is_nil(rest)) {
+    return new_atom_error(args, "'cons' requires two arguments");
+  }
+  struct atom *second = car(rest);
+  if (!is_nil(cdr(rest))) {
+    return new_atom_error(args, "'cons' requires exactly two arguments");
+  }
+
+  struct atom *cell_car = first;
+  struct atom *cell_cdr = second;
   return new_cons(cell_car, cell_cdr);
 }
 
@@ -395,32 +407,38 @@ struct atom *primitive_read(struct atom *args, struct environment *env) {
   return result;
 }
 
-struct atom *primitive_readf(struct atom *args, struct environment *env) {
+struct atom *primitive_slurp(struct atom *args, struct environment *env) {
   (void)env;
 
-  if (!args || args->type != ATOM_TYPE_CONS || !args->value.cons.car) {
-    return new_atom_error(args, "Error: 'readf' requires one argument");
+  if (!is_cons(args) || !is_string(car(args)) || cdr(args) != atom_nil()) {
+    return new_atom_error(args,
+                          "Error: 'slurp' requires exactly one argument, which must be a string");
   }
 
   struct atom *input = car(args);
-  if (input->type != ATOM_TYPE_STRING) {
-    return new_atom_error(input, "Error: 'readf' argument must be a string");
+
+  FILE *fp = fopen(input->value.string.ptr, "r");
+  if (!fp) {
+    return new_atom_error(input, "could not open file '%s'", input->value.string.ptr);
   }
 
-  struct source_file *source = source_file_new(input->value.string.ptr);
-  if (!source) {
-    return new_atom_error(input, "Error: could not open file '%s'", input->value.string.ptr);
+  fseek(fp, 0, SEEK_END);
+  long size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+
+  if (size < 0) {
+    fclose(fp);
+    return new_atom_error(input, "could not determine size of file '%s'", input->value.string.ptr);
   }
 
-  struct atom *result = read_atom(source);
+  char *buffer = (char *)malloc(size + 1);
+  fread(buffer, 1, size, fp);
+  fclose(fp);
 
-  source_file_free(source);
+  buffer[size] = '\0';
 
-  if (!result) {
-    return new_atom_error(input, "Error: could not read from file '%s'", input->value.string.ptr);
-  }
-
-  return result;
+  union atom_value value = {.string = {.ptr = buffer, .len = size}};
+  return new_atom(ATOM_TYPE_STRING, value);
 }
 
 struct atom *primitive_read_all(struct atom *args, struct environment *env) {
@@ -525,8 +543,8 @@ void init_primitives(struct environment *env) {
   env_bind(env, intern("to-string", 0), primitive_function(primitive_to_string));
   // (read ...) - reads an atom from a string
   env_bind(env, intern("read", 0), primitive_function(primitive_read));
-  // (readf ...) - reads an atom from a file
-  env_bind(env, intern("readf", 0), primitive_function(primitive_readf));
+  // (slurp ...) - reads a file and returns the contents as a string
+  env_bind(env, intern("slurp", 0), primitive_function(primitive_slurp));
   // (read-all ...) - reads all atoms from a file
   env_bind(env, intern("read-all", 0), primitive_function(primitive_read_all));
   // (read-line) - reads a single line from stdin
