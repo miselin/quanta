@@ -11,6 +11,10 @@ void logging_init(int to_file, int min_level) {
   if (to_file) {
     unlink("quanta.log");
     fd = open("quanta.log", O_WRONLY | O_CREAT | O_APPEND, 0644);
+
+    if (log_fd != -1) {
+      close(log_fd);
+    }
     log_fd = fd;
   }
 
