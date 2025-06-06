@@ -20,6 +20,42 @@ TEST(ArithmeticTest, Add) {
   source_file_free(source);
 }
 
+TEST(ArithmeticTest, AddMixedTypes) {
+  struct source_file *source = source_file_str("(+ 1 2.0)", 0);
+  ASSERT_TRUE(source != NULL);
+
+  struct environment *env = create_default_environment();
+
+  struct atom *atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_error(atom));
+
+  source_file_free(source);
+}
+
+TEST(ArithmeticTest, AddWrongTypes1) {
+  struct source_file *source = source_file_str("(+ 1 \"string\")", 0);
+  ASSERT_TRUE(source != NULL);
+
+  struct environment *env = create_default_environment();
+
+  struct atom *atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_error(atom));
+
+  source_file_free(source);
+}
+
+TEST(ArithmeticTest, AddWrongTypes2) {
+  struct source_file *source = source_file_str("(+ \"string\" 1)", 0);
+  ASSERT_TRUE(source != NULL);
+
+  struct environment *env = create_default_environment();
+
+  struct atom *atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_error(atom));
+
+  source_file_free(source);
+}
+
 TEST(ArithmeticTest, Subtract) {
   struct source_file *source = source_file_str("(- 5 2)", 0);
   ASSERT_TRUE(source != NULL);

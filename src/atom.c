@@ -42,7 +42,8 @@ struct atom *new_atom(enum AtomType type, union atom_value value) {
 }
 
 struct atom *new_cons(struct atom *car, struct atom *cdr) {
-  if (!car && !cdr) {
+  // (nil . nil) is perfectly legal. Here we simply check for invaid internal usage.
+  if (car == NULL && cdr == NULL) {
     return new_atom_error(NULL, "'cons' requires at least one of car or cdr to be non-null");
   }
 

@@ -74,6 +74,8 @@ const char *escape_string(const char *str, size_t len) {
   escaped[j++] = '"';
   escaped[j] = '\0';
 
+  fprintf(stderr, "escape '%s' -> '%s'\n", str, escaped);
+
   return escaped;
 }
 
@@ -90,6 +92,14 @@ int print_str(char *buffer, size_t buffer_size, struct atom *atom, int readably)
       return snprintf(buffer, buffer_size, "%f", atom->value.fvalue);
       break;
     case ATOM_TYPE_STRING:
+      if (!readably) {
+        const char *escaped = escape_string(atom->value.string.ptr, atom->value.string.len);
+        strncpy(buffer, escaped, buffer_size);
+        int result = strlen(escaped);
+        free((void *)escaped);
+        return result;
+      }
+
       return snprintf(buffer, buffer_size, "\"%s\"", atom->value.string.ptr);
       break;
     case ATOM_TYPE_CONS:
@@ -99,13 +109,6 @@ int print_str(char *buffer, size_t buffer_size, struct atom *atom, int readably)
       return snprintf(buffer, buffer_size, "nil");
       break;
     case ATOM_TYPE_SYMBOL:
-      if (!readably) {
-        const char *escaped = escape_string(atom->value.string.ptr, atom->value.string.len);
-        int len = snprintf(buffer, buffer_size, "%s", escaped);
-        free((void *)escaped);
-        return len;
-      }
-
       return snprintf(buffer, buffer_size, "%s", atom->value.string.ptr);
       break;
     case ATOM_TYPE_KEYWORD:
@@ -113,6 +116,11 @@ int print_str(char *buffer, size_t buffer_size, struct atom *atom, int readably)
       break;
     case ATOM_TYPE_TRUE:
       return snprintf(buffer, buffer_size, "t");
+      break;
+    case ATOM_TYPE_ERROR:
+      return snprintf(buffer, buffer_size, "<error %s>", atom->value.error.message);
+      break;
+    case ATOM_TYPE_EOF:
       break;
     default:
       fprintf(stderr, "Unknown atom type: %d\n", atom->type);

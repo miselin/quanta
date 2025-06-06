@@ -12,6 +12,9 @@ add_executable(quanta_tests
     define_test.cc
     let_test.cc
     eval_test.cc
+    quote_test.cc
+    primitives_test.cc
+    print_test.cc
 )
 target_link_libraries(quanta_tests quanta GTest::gtest)
 gtest_discover_tests(quanta_tests)

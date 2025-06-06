@@ -74,13 +74,15 @@ struct atom *primitive_cons(struct atom *args, struct environment *env) {
 struct atom *primitive_car(struct atom *args, struct environment *env) {
   (void)env;
 
-  return car(args);
+  struct atom *atom = car(args);
+  return car(atom);
 }
 
 struct atom *primitive_cdr(struct atom *args, struct environment *env) {
   (void)env;
 
-  return cdr(args);
+  struct atom *atom = car(args);
+  return cdr(atom);
 }
 
 static int check_arithmetic_args(struct atom *args, struct atom **error) {
@@ -92,15 +94,15 @@ static int check_arithmetic_args(struct atom *args, struct atom **error) {
   args = cdr(args);
   while (args && args->type == ATOM_TYPE_CONS) {
     struct atom *arg = car(args);
-    if (arg->type != type) {
+    if (arg->type != ATOM_TYPE_INT && arg->type != ATOM_TYPE_FLOAT) {
+      *error = new_atom_error(arg, "arithmetic operations only support integers and floats, got %s",
+                              atom_type_to_string(arg->type));
+      return 0;
+    } else if (arg->type != type) {
       *error = new_atom_error(first_arg,
                               "arithmetic operations require all arguments to be of the same type, "
                               "expected %s, got %s",
                               atom_type_to_string(type), atom_type_to_string(arg->type));
-      return 0;
-    } else if (arg->type != ATOM_TYPE_INT && arg->type != ATOM_TYPE_FLOAT) {
-      *error = new_atom_error(arg, "arithmetic operations only support integers and floats, got %s",
-                              atom_type_to_string(arg->type));
       return 0;
     }
     args = cdr(args);

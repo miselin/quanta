@@ -1,2 +1,13 @@
 (print (neq? 0 1))
 (print (neq? 0 0))
+
+(define x (cons 0 1))
+(print x)
+;; => (0 . 1)
+(setcar! x 1)
+(print x)
+;; => (1 . 1)
+
+(setcdr! x 2)
+(print x)
+;; => (1 . 2)

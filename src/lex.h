@@ -20,6 +20,10 @@ enum Token {
   TOKEN_QUOTE = 6,
   // The . character, used for dotted pairs in lists
   TOKEN_DOT = 7,
+  // The ` character, used for quasiquoting
+  TOKEN_BACKTICK = 8,
+  // The , character, used for unquoting
+  TOKEN_COMMA = 9,
 };
 
 struct token {

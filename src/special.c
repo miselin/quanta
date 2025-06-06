@@ -16,12 +16,57 @@ static struct atom *special_form(PrimitiveFunction func) {
 struct atom *quote(struct atom *args, struct environment *env) {
   (void)env;
 
-  if (!args || args->type != ATOM_TYPE_CONS || !args->value.cons.car) {
-    return new_atom_error(args, "Error: 'quote' requires one argument");
+  if (!is_cons(args) || car(args) == atom_nil() || cdr(args) != atom_nil()) {
+    return new_atom_error(args, "Error: 'quote' requires exactly one argument");
   }
 
-  // Return the first element of the list, without evaluating it
   return car(args);
+}
+
+static struct atom *quasiquote_atom(struct atom *atom, struct environment *env, int depth) {
+  if (is_cons(atom)) {
+    struct atom *head = car(atom);
+    if (head == intern("quasiquote", 0)) {
+      // don't evaluate the quasiquote itself yet
+      return new_cons(intern("quasiquote", 0),
+                      new_cons(quasiquote_atom(car(cdr(atom)), env, depth + 1), atom_nil()));
+    } else if (head == intern("unquote", 0)) {
+      if (depth == 0) {
+        // unquote here
+        return eval(car(cdr(atom)), env);
+      } else {
+        // don't evaluate this unquote yet, stash it for later but continue quasiquoting
+        return new_cons(intern("unquote", 0),
+                        new_cons(quasiquote_atom(car(cdr(atom)), env, depth - 1), atom_nil()));
+      }
+    }
+
+    struct atom *quasi_car = quasiquote_atom(car(atom), env, depth);
+    struct atom *quasi_cdr = quasiquote_atom(cdr(atom), env, depth);
+
+    return new_cons(quasi_car, quasi_cdr);
+  }
+
+  return atom;
+}
+
+struct atom *quasiquote(struct atom *args, struct environment *env) {
+  (void)env;
+
+  if (!is_cons(args) || car(args) == atom_nil() || cdr(args) != atom_nil()) {
+    return new_atom_error(args, "Error: 'quasiquote' requires exactly one argument");
+  }
+
+  return quasiquote_atom(car(args), env, 0);
+}
+
+struct atom *unquote(struct atom *args, struct environment *env) {
+  (void)env;
+  (void)args;
+
+  // this special form exists only for this helpful error message
+  // quasiquote handles unquoting itself during evaluation
+  return new_atom_error(args, "Error: 'unquote' is only valid inside a 'quasiquote'");
 }
 
 struct atom *lambda(struct atom *args, struct environment *env) {
@@ -64,6 +109,26 @@ struct atom *defun(struct atom *args, struct environment *env) {
   }
 
   env_set(env, name, defn);
+
+  return name;
+}
+
+struct atom *defmacro(struct atom *args, struct environment *env) {
+  (void)env;
+
+  struct atom *name = car(args);
+  if (!is_symbol(name)) {
+    return new_atom_error(name, "Error: 'defun' first argument must be a symbol");
+  }
+
+  struct atom *defn = lambda(cdr(args), env);
+  if (is_error(defn)) {
+    return defn;
+  }
+
+  defn->value.lambda.flags |= ATOM_LAMBDA_FLAG_MACRO;
+
+  env_bind(env, name, defn);
 
   return name;
 }
@@ -119,7 +184,7 @@ struct atom *special_form_set(struct atom *args, struct environment *env) {
                           name->value.string.ptr);
   }
 
-  struct atom *value = car(cdr(args));
+  struct atom *value = eval(car(cdr(args)), env);
   if (is_error(value)) {
     return value;
   }
@@ -233,10 +298,14 @@ struct atom *special_form_cond(struct atom *args, struct environment *env) {
 
 void init_special_forms(struct environment *env) {
   env_bind(env, intern("quote", 0), special_form(quote));
+  env_bind(env, intern("quasiquote", 0), special_form(quasiquote));
+  env_bind(env, intern("unquote", 0), special_form(unquote));
+
   env_bind(env, intern("lambda", 0), special_form(lambda));
   env_bind(env, intern("begin", 0), special_form(special_form_begin));
   env_bind(env, intern("define", 0), special_form(special_form_define));
   env_bind(env, intern("defun", 0), special_form(defun));
+  env_bind(env, intern("defmacro", 0), special_form(defmacro));
   env_bind(env, intern("set!", 0), special_form(special_form_set));
   env_bind(env, intern("let", 0), special_form(special_form_let));
   env_bind(env, intern("cond", 0), special_form(special_form_cond));

@@ -48,7 +48,14 @@ int main(int argc, char *argv[]) {
         }
       }
 
+      int failed = !source_file_eof(stdlib_source);
+
       source_file_free(stdlib_source);
+
+      if (failed) {
+        fprintf(stderr, "Error: failed to load standard library\n");
+        return 1;
+      }
     }
   }
 

@@ -18,7 +18,9 @@ static struct atom *eval_list(struct atom *list, struct environment *env);
 
 // Binds the arguments in the environment based on the binding list and the provided arguments.
 static struct atom *bind_arguments(struct environment *env, struct atom *binding_list,
-                                   struct atom *args);
+                                   struct atom *args, int should_eval);
+
+static struct atom *apply_macro(struct atom *fn, struct atom *args, struct environment *env);
 
 // Used to track shadow stack for roots in functions like eval_list
 struct shadow_root {
@@ -59,9 +61,24 @@ struct atom *eval(struct atom *atom, struct environment *env) {
         return fn;
       }
 
-      struct atom *args = fn->type == ATOM_TYPE_SPECIAL ? eval_cdr : eval_list(eval_cdr, env);
+      int eval_args = 1;
+      if (fn->type == ATOM_TYPE_SPECIAL) {
+        eval_args = 0;
+      } else if (fn->value.lambda.flags & ATOM_LAMBDA_FLAG_MACRO) {
+        eval_args = 0;
+      }
+
+      struct atom *args = eval_args ? eval_list(eval_cdr, env) : eval_cdr;
       if (is_error(args)) {
         return args;
+      }
+
+      if (is_lambda(fn) && (fn->value.lambda.flags & ATOM_LAMBDA_FLAG_MACRO)) {
+        clog_debug(CLOG(LOGGER_EVAL), "expanding macro %s...", eval_car->value.string.ptr);
+        struct atom *expanded = apply_macro(fn, args, env);
+        print_str(buf, 1024, expanded, 0);
+        clog_debug(CLOG(LOGGER_EVAL), "expanded macro %s to %s", eval_car->value.string.ptr, buf);
+        return eval(expanded, env);
       }
 
       if (!ENABLE_TCO || !is_lambda(fn)) {
@@ -77,10 +94,14 @@ struct atom *eval(struct atom *atom, struct environment *env) {
       // tail-call optimization - iteratively evaluate so we don't recurse
       atom = fn->value.lambda.body;
       env = create_environment(fn->value.lambda.env);
-      bind_arguments(env, fn->value.lambda.args, args);
+      struct atom *error = bind_arguments(env, fn->value.lambda.args, args, 1);
 
       gc_release(args);
       gc_release(fn);
+
+      if (error) {
+        return error;
+      }
       continue;
     }
 
@@ -173,7 +194,7 @@ struct atom *apply(struct atom *fn, struct atom *args, struct environment *env) 
 
   env = create_environment(parent_env);
 
-  struct atom *error = bind_arguments(env, fn->value.lambda.args, args);
+  struct atom *error = bind_arguments(env, fn->value.lambda.args, args, 1);
   if (error) {
     return error;
   }
@@ -181,14 +202,40 @@ struct atom *apply(struct atom *fn, struct atom *args, struct environment *env) 
   return eval(fn->value.lambda.body, env);
 }
 
+static struct atom *apply_macro(struct atom *fn, struct atom *args, struct environment *env) {
+  if (!is_lambda(fn)) {
+    return new_atom_error(fn, "expected a macro, got a %s", atom_type_to_string(fn->type));
+  } else if ((fn->value.lambda.flags & ATOM_LAMBDA_FLAG_MACRO) == 0) {
+    return new_atom_error(fn, "expected a macro, got a function");
+  }
+
+  struct environment *parent_env = env;
+  if (fn->type == ATOM_TYPE_LAMBDA) {
+    parent_env = fn->value.lambda.env;
+  }
+
+  env = create_environment(parent_env);
+
+  // Bind arguments without evaluating them
+  struct atom *error = bind_arguments(env, fn->value.lambda.args, args, 0);
+  if (error) {
+    return error;
+  }
+
+  // This will evaluate to expanded form that we're meant to evaluate
+  return eval(fn->value.lambda.body, env);
+}
+
 static struct atom *bind_arguments(struct environment *env, struct atom *binding_list,
-                                   struct atom *args) {
+                                   struct atom *args, int should_eval) {
+  clog_debug(CLOG(LOGGER_EVAL), "bind_arguments: binding_list %p args %p should_eval %d\n",
+             (void *)binding_list, (void *)args, should_eval);
   struct atom *current_arg = args;
   while (binding_list && binding_list->type == ATOM_TYPE_CONS) {
     struct atom *param = car(binding_list);
     struct atom *arg = car(current_arg);
 
-    struct atom *evaled = eval(arg, env);
+    struct atom *evaled = should_eval ? eval(arg, env) : arg;
     env_bind(env, param, evaled);
 
     binding_list = cdr(binding_list);

@@ -74,7 +74,7 @@ static struct atom *read_atom_lex(struct lex *lex) {
       return intern(token->text, token->text[0] == ':');
     case TOKEN_STRING: {
       // TODO: handle escaped characters
-      union atom_value value = {.string = {.ptr = strdup(token->text), .len = token->length - 2}};
+      union atom_value value = {.string = {.ptr = strdup(token->text), .len = token->length}};
       clog_debug(CLOG(LOGGER_READ), "read string: '%s'", value.string.ptr);
       return new_atom(ATOM_TYPE_STRING, value);
     }
@@ -91,6 +91,24 @@ static struct atom *read_atom_lex(struct lex *lex) {
 
       struct atom *quote_atom = intern("quote", 0);
       return new_cons(quote_atom, new_cons(atom, atom_nil()));
+    } break;
+    case TOKEN_BACKTICK: {
+      struct atom *atom = read_atom_lex(lex);
+      if (is_error(atom)) {
+        return atom;
+      }
+
+      struct atom *quasiquote_atom = intern("quasiquote", 0);
+      return new_cons(quasiquote_atom, new_cons(atom, atom_nil()));
+    } break;
+    case TOKEN_COMMA: {
+      struct atom *atom = read_atom_lex(lex);
+      if (is_error(atom)) {
+        return atom;
+      }
+
+      struct atom *unquote_atom = intern("unquote", 0);
+      return new_cons(unquote_atom, new_cons(atom, atom_nil()));
     } break;
     case TOKEN_DOT:
       return new_atom_error(NULL, "unexpected dot in input, expected a list or atom");

@@ -1,0 +1,12 @@
+(print (quasiquote 5))
+;; => 5
+
+(define x 5)
+(print (quasiquote (a b (unquote x))))
+;; => (a b 5)
+
+(print `(a b ,x))
+;; => (a b 5)
+
+(print (quasiquote (a (quasiquote (b (unquote x))))))
+;; => (a (quasiquote (b (unquote x))))

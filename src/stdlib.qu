@@ -1,3 +1,9 @@
 (defun neq? (a b)
     (cond ((eq? a b) nil)
           (t t)))
+
+(defmacro setcar! (place newval)
+    `(set! ,place (cons ,newval (cdr ,place))))
+
+(defmacro setcdr! (place newval)
+    `(set! ,place (cons (car ,place) ,newval)))

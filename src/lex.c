@@ -34,6 +34,10 @@ static const char *token_type_to_string(enum Token type) {
       return "QUOTE";
     case TOKEN_DOT:
       return "DOT";
+    case TOKEN_BACKTICK:
+      return "BACKTICK";
+    case TOKEN_COMMA:
+      return "COMMA";
     default:
       return "UNKNOWN";
   }
@@ -234,6 +238,20 @@ struct token *lex_peek_token(struct lex *lexer) {
       } else {
         lexer->current_token->length = length;
       }
+    } break;
+
+    case '`': {
+      lexer->current_token = gc_new(GC_TYPE_TOKEN, sizeof(struct token));
+      lexer->current_token->type = TOKEN_BACKTICK;
+      lexer->current_token->text = strdup("`");
+      lexer->current_token->length = 1;
+    } break;
+
+    case ',': {
+      lexer->current_token = gc_new(GC_TYPE_TOKEN, sizeof(struct token));
+      lexer->current_token->type = TOKEN_COMMA;
+      lexer->current_token->text = strdup(",");
+      lexer->current_token->length = 1;
     } break;
 
     default:

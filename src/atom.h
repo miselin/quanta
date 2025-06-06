@@ -23,6 +23,8 @@ enum AtomType {
   ATOM_TYPE_EOF = 12,       // end of file marker
 };
 
+#define ATOM_LAMBDA_FLAG_MACRO (1 << 0)
+
 typedef struct atom *(*PrimitiveFunction)(struct atom *args, struct environment *env);
 
 struct cons {
@@ -43,6 +45,7 @@ union atom_value {
     struct atom *args;
     struct environment *env;
     struct atom *body;
+    int flags;
   } lambda;
   struct {
     char *message;

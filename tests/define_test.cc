@@ -93,3 +93,40 @@ TEST(DefineTests, RecursiveFunction) {
 
   source_file_free(source);
 }
+
+TEST(DefineTests, Macros) {
+  struct source_file *source = source_file_str(
+      "(defmacro setcar! (place newval) `(set! ,place (cons ,newval (cdr ,place))))\n"
+      "(define x (cons 0 1))\n"
+      "(setcar! x 1)\n"
+      "x",
+      0);
+  ASSERT_TRUE(source != NULL);
+
+  struct environment *env = create_default_environment();
+
+  // defmacro setcar!
+  struct atom *atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_symbol(atom));
+  EXPECT_STREQ(atom->value.string.ptr, "setcar!");
+
+  // define x
+  atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_symbol(atom));
+  EXPECT_STREQ(atom->value.string.ptr, "x");
+
+  // setcar!
+  atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_symbol(atom));
+  EXPECT_STREQ(atom->value.string.ptr, "x");
+
+  // evalated x
+  atom = eval(read_atom(source), env);
+  EXPECT_TRUE(is_cons(atom));
+  EXPECT_TRUE(is_int(car(atom)));
+  EXPECT_TRUE(is_int(cdr(atom)));
+  EXPECT_EQ(car(atom)->value.ivalue, 1);
+  EXPECT_EQ(cdr(atom)->value.ivalue, 1);
+
+  source_file_free(source);
+}
