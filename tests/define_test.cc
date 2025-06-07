@@ -26,8 +26,9 @@ TEST(DefineTests, DefunSquare) {
 
 TEST(DefineTests, Closures) {
   struct source_file *source = source_file_str(
-      "(define make-adder (lambda (x) (lambda (y) (+ x y))))\n(define add5 (make-adder 5))\n(add5 "
-      "10)",
+      "(define make-adder (lambda (x) (lambda (y) (+ x y))))\n"
+      "(define add5 (make-adder 5))\n"
+      "(add5 10)",
       0);
   ASSERT_TRUE(source != NULL);
 

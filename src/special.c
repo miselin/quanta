@@ -1,12 +1,11 @@
 #include "special.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <clog.h>
 
 #include "atom.h"
 #include "eval.h"
 #include "intern.h"
+#include "log.h"
 
 static struct atom *special_form(PrimitiveFunction func) {
   union atom_value value = {.primitive = func};
@@ -101,16 +100,17 @@ struct atom *defun(struct atom *args, struct environment *env) {
   }
 
   // placeholder binding for self-references
-  env_bind(env, name, atom_nil());
+  struct atom *bound = env_bind(env, name, atom_nil());
+  if (is_error(bound)) {
+    return bound;
+  }
 
   struct atom *defn = lambda(cdr(args), env);
   if (is_error(defn)) {
     return defn;
   }
 
-  env_set(env, name, defn);
-
-  return name;
+  return env_set(env, name, defn);
 }
 
 struct atom *defmacro(struct atom *args, struct environment *env) {
@@ -128,9 +128,7 @@ struct atom *defmacro(struct atom *args, struct environment *env) {
 
   defn->value.lambda.flags |= ATOM_LAMBDA_FLAG_MACRO;
 
-  env_bind(env, name, defn);
-
-  return name;
+  return env_bind(env, name, defn);
 }
 
 struct atom *special_form_define(struct atom *args, struct environment *env) {
@@ -154,7 +152,10 @@ struct atom *special_form_define(struct atom *args, struct environment *env) {
   }
 
   // placeholder binding for self-references
-  env_bind(env, name, atom_nil());
+  struct atom *bound = env_bind(env, name, atom_nil());
+  if (is_error(bound)) {
+    return bound;
+  }
 
   struct atom *value_evaled = eval(value, env);
   if (is_error(value_evaled)) {
@@ -162,12 +163,18 @@ struct atom *special_form_define(struct atom *args, struct environment *env) {
   }
 
   if (value_evaled->type == ATOM_TYPE_LAMBDA) {
-    env_bind(value_evaled->value.lambda.env, name, value_evaled);
+    // We need to also overwrite the symbol in the lambda's own environment
+    /*
+    bound = env_set(value_evaled->value.lambda.env, name, value_evaled);
+    if (is_error(bound)) {
+      clog_debug(CLOG(LOGGER_SPEC), "failed setting %s in the lambda's env: %s",
+                 name->value.string.ptr, bound->value.error.message);
+      return bound;
+    }
+      */
   }
 
-  env_set(env, name, value_evaled);
-
-  return name;
+  return env_set(env, name, value_evaled);
 }
 
 struct atom *special_form_set(struct atom *args, struct environment *env) {
@@ -188,9 +195,8 @@ struct atom *special_form_set(struct atom *args, struct environment *env) {
   if (is_error(value)) {
     return value;
   }
-  env_set(env, name, value);
 
-  return name;
+  return env_set(env, name, value);
 }
 
 struct atom *special_form_begin(struct atom *args, struct environment *env) {
@@ -253,7 +259,10 @@ struct atom *special_form_let(struct atom *args, struct environment *env) {
       return evaled_value;
     }
 
-    env_bind(let_env, name, evaled_value);
+    struct atom *bound = env_bind(let_env, name, evaled_value);
+    if (is_error(bound)) {
+      return bound;
+    }
 
     bindings = cdr(bindings);
   }

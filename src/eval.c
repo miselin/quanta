@@ -236,7 +236,10 @@ static struct atom *bind_arguments(struct environment *env, struct atom *binding
     struct atom *arg = car(current_arg);
 
     struct atom *evaled = should_eval ? eval(arg, env) : arg;
-    env_bind(env, param, evaled);
+    struct atom *bound = env_bind(env, param, evaled);
+    if (is_error(bound)) {
+      return bound;
+    }
 
     binding_list = cdr(binding_list);
     current_arg = cdr(current_arg);

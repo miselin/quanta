@@ -18,8 +18,8 @@ void erase_environment(struct environment *env);
 
 struct atom *env_lookup(struct environment *env, struct atom *symbol);
 
-void env_bind(struct environment *env, struct atom *symbol, struct atom *value);
-void env_set(struct environment *env, struct atom *symbol, struct atom *value);
+struct atom *env_bind(struct environment *env, struct atom *symbol, struct atom *value);
+struct atom *env_set(struct environment *env, struct atom *symbol, struct atom *value);
 
 void environment_gc_mark(struct environment *env);
 

@@ -85,8 +85,18 @@ struct atom *env_lookup(struct environment *env, struct atom *symbol) {
   return NULL;
 }
 
-void env_bind(struct environment *env, struct atom *symbol, struct atom *value) {
-  // TODO: if already set, we need to error (create a bind_set and use it instead)
+struct atom *env_bind(struct environment *env, struct atom *symbol, struct atom *value) {
+  if (!is_symbol(symbol)) {
+    return new_atom_error(symbol, "Error: env_bind requires a symbol, got %s",
+                          atom_type_to_string(symbol->type));
+  }
+
+  if (g_hash_table_contains(env->bindings, symbol->value.string.ptr)) {
+    clog_debug(CLOG(LOGGER_ENV), "Warning: env_bind called on already bound symbol '%s'",
+               symbol->value.string.ptr);
+    return new_atom_error(symbol, "Error: symbol '%s' is already bound in this environment",
+                          symbol->value.string.ptr);
+  }
 
   struct binding_cell *cell = gc_new(GC_TYPE_BINDING_CELL, sizeof(struct binding_cell));
   cell->atom = value;
@@ -97,20 +107,24 @@ void env_bind(struct environment *env, struct atom *symbol, struct atom *value) 
   // key is an interned string, value is the real atom value
   // the binding should not outlive the atom
   g_hash_table_insert(env->bindings, g_strdup(symbol->value.string.ptr), cell);
+
+  return symbol;
 }
 
-void env_set(struct environment *env, struct atom *symbol, struct atom *value) {
+struct atom *env_set(struct environment *env, struct atom *symbol, struct atom *value) {
   struct binding_cell *cell = env_lookup_cell(env, symbol);
   if (cell) {
     clog_debug(CLOG(LOGGER_ENV), "Setting value for symbol '%s' in env cell %p",
                symbol->value.string.ptr, (void *)cell);
     cell->atom = value;
-    return;
+    return symbol;
   }
 
-  // TODO: error if not found, set requires an existing binding
   clog_debug(CLOG(LOGGER_ENV), "Warning: env_set called on unbound symbol '%s'",
              symbol->value.string.ptr);
+
+  return new_atom_error(symbol, "Error: symbol '%s' is not bound in this environment",
+                        symbol->value.string.ptr);
 }
 
 void environment_gc_mark(struct environment *env) {

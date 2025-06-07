@@ -73,7 +73,6 @@ static struct atom *read_atom_lex(struct lex *lex) {
 
       return intern(token->text, token->text[0] == ':');
     case TOKEN_STRING: {
-      // TODO: handle escaped characters
       union atom_value value = {.string = {.ptr = strdup(token->text), .len = token->length}};
       clog_debug(CLOG(LOGGER_READ), "read string: '%s'", value.string.ptr);
       return new_atom(ATOM_TYPE_STRING, value);

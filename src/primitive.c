@@ -303,10 +303,19 @@ struct atom *primitive_nilp(struct atom *args, struct environment *env) {
 struct atom *primitive_apply(struct atom *args, struct environment *env) {
   (void)env;
 
-  // TODO: checks etc
+  if (!is_cons(args) || !car(args) || !cdr(args) || cdr(cdr(args)) != atom_nil()) {
+    return new_atom_error(args, "Error: 'apply' requires a function and a list of arguments");
+  }
 
   struct atom *fn = car(args);
   struct atom *arguments = car(cdr(args));
+
+  if (!is_lambda(fn) && !is_primitive(fn) && !is_special(fn)) {
+    return new_atom_error(fn, "Error: 'apply' requires a function as the first argument");
+  } else if (!is_cons(arguments)) {
+    return new_atom_error(arguments,
+                          "Error: 'apply' requires a list of arguments as the second argument");
+  }
 
   return apply(fn, arguments, env);
 }
@@ -314,7 +323,10 @@ struct atom *primitive_apply(struct atom *args, struct environment *env) {
 struct atom *primitive_eval(struct atom *args, struct environment *env) {
   (void)env;
 
-  // TODO: car() here is probably not completely right
+  if (!is_cons(args) || !car(args) || cdr(args) != atom_nil()) {
+    return new_atom_error(args, "Error: 'eval' requires exactly one argument");
+  }
+
   return eval(car(args), env);
 }
 
