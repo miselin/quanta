@@ -8,8 +8,8 @@
 #include "gc.h"
 #include "log.h"
 
-static GHashTable *symbol_table = NULL;
-static GHashTable *keyword_table = NULL;
+static GHashTable* symbol_table = NULL;
+static GHashTable* keyword_table = NULL;
 
 void init_intern_tables(void) {
   symbol_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
@@ -28,14 +28,14 @@ void cleanup_intern_tables(void) {
   }
 }
 
-struct atom *intern(const char *name, int is_keyword) {
+struct atom* intern(const char* name, int is_keyword) {
   if (!symbol_table) {
     init_intern_tables();
   }
 
-  GHashTable *table = is_keyword ? keyword_table : symbol_table;
+  GHashTable* table = is_keyword ? keyword_table : symbol_table;
 
-  struct atom *existing = g_hash_table_lookup(table, name);
+  struct atom* existing = g_hash_table_lookup(table, name);
   if (existing) {
     return existing;
   }
@@ -43,9 +43,9 @@ struct atom *intern(const char *name, int is_keyword) {
   union atom_value value = {.string = {.ptr = g_strdup(name), .len = strlen(name)}};
   enum AtomType atom_type = is_keyword ? ATOM_TYPE_KEYWORD : ATOM_TYPE_SYMBOL;
 
-  struct atom *atom = new_atom(atom_type, value);
+  struct atom* atom = new_atom(atom_type, value);
 
-  clog_debug(CLOG(LOGGER_INTERN), "interned %s as %p", name, (void *)atom);
+  clog_debug(CLOG(LOGGER_INTERN), "interned %s as %p", name, (void*)atom);
 
   g_hash_table_insert(table, g_strdup(atom->value.string.ptr), atom);
   return atom;
@@ -60,7 +60,7 @@ void intern_gc_mark(void) {
 
   g_hash_table_iter_init(&iter, symbol_table);
   while (g_hash_table_iter_next(&iter, &key, &value)) {
-    struct atom *atom = (struct atom *)value;
+    struct atom* atom = (struct atom*)value;
     gc_mark(atom);
   }
 }

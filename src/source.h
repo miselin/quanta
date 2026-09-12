@@ -10,20 +10,20 @@ extern "C" {
 #endif
 
 // Creates a new source file by opening the given file.
-struct source_file *source_file_new(const char *filename);
+struct source_file* source_file_new(const char* filename);
 
 // Creates a new source file from stdin.
-struct source_file *source_file_stdin(void);
+struct source_file* source_file_stdin(void);
 
 // Creates a new source file from the given string. The string is copied.
-struct source_file *source_file_str(const char *str, size_t length);
+struct source_file* source_file_str(const char* str, size_t length);
 
-char source_file_getc(struct source_file *source);
-void source_file_ungetc(struct source_file *source, char c);
+char source_file_getc(struct source_file* source);
+void source_file_ungetc(struct source_file* source, char c);
 
-int source_file_eof(struct source_file *source);
+int source_file_eof(struct source_file* source);
 
-void source_file_free(struct source_file *source);
+void source_file_free(struct source_file* source);
 
 #ifdef __cplusplus
 }  // extern "C"

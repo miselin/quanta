@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-void init_special_forms(struct environment *env);
+void init_special_forms(struct environment* env);
 
 #ifdef __cplusplus
 }  // extern "C"

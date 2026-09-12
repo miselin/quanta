@@ -11,12 +11,12 @@
 #include "source.h"
 
 struct lex {
-  struct source_file *source;
-  struct token *current_token;
+  struct source_file* source;
+  struct token* current_token;
   struct token eof;
 };
 
-static const char *token_type_to_string(enum Token type) {
+static const char* token_type_to_string(enum Token type) {
   switch (type) {
     case TOKEN_EOF:
       return "EOF";
@@ -43,7 +43,7 @@ static const char *token_type_to_string(enum Token type) {
   }
 }
 
-static void lex_consume_whitespace(struct lex *lexer) {
+static void lex_consume_whitespace(struct lex* lexer) {
   size_t n = 0;
   char c = 0;
 
@@ -84,7 +84,7 @@ static int is_terminator(char c) {
   return isspace(c) || c == '(' || c == ')' || c == ';' || c == '"' || c == '\'' || c == EOF;
 }
 
-static int read_until_terminator(struct lex *lexer, char terminator, char *buffer,
+static int read_until_terminator(struct lex* lexer, char terminator, char* buffer,
                                  size_t buffer_size, int allow_escaping) {
   int at = 0;
   int escape = 0;
@@ -136,7 +136,7 @@ static int read_until_terminator(struct lex *lexer, char terminator, char *buffe
   return at > 0 ? at : -1;
 }
 
-static int read_atom_string(struct lex *lexer, char *buffer, size_t buffer_size) {
+static int read_atom_string(struct lex* lexer, char* buffer, size_t buffer_size) {
   int at = 0;
   char c = source_file_getc(lexer->source);
   while (!is_terminator(c)) {
@@ -150,8 +150,8 @@ static int read_atom_string(struct lex *lexer, char *buffer, size_t buffer_size)
   return at > 0 ? at : -1;
 }
 
-struct lex *lex_new(struct source_file *source) {
-  struct lex *lexer = gc_new(GC_TYPE_LEXER, sizeof(struct lex));
+struct lex* lex_new(struct source_file* source) {
+  struct lex* lexer = gc_new(GC_TYPE_LEXER, sizeof(struct lex));
   lexer->source = source;
   lexer->current_token = NULL;
 
@@ -161,7 +161,7 @@ struct lex *lex_new(struct source_file *source) {
   return lexer;
 }
 
-struct token *lex_next_token(struct lex *lexer) {
+struct token* lex_next_token(struct lex* lexer) {
   if (!lexer->current_token) {
     lex_peek_token(lexer);
     if (!lexer->current_token) {
@@ -170,14 +170,14 @@ struct token *lex_next_token(struct lex *lexer) {
     }
   }
 
-  struct token *result = lexer->current_token;
+  struct token* result = lexer->current_token;
   lexer->current_token = NULL;
   clog_debug(CLOG(LOGGER_LEX), "lex_next_token: %s %s", token_type_to_string(result->type),
              result->text ? result->text : "NULL");
   return result;
 }
 
-struct token *lex_peek_token(struct lex *lexer) {
+struct token* lex_peek_token(struct lex* lexer) {
   if (lexer->current_token) {
     return lexer->current_token;
   }
@@ -227,10 +227,10 @@ struct token *lex_peek_token(struct lex *lexer) {
     case '"': {
       lexer->current_token = gc_new(GC_TYPE_TOKEN, sizeof(struct token));
       lexer->current_token->type = TOKEN_STRING;
-      lexer->current_token->text = (char *)malloc(256);
-      int length = read_until_terminator(lexer, '"', (char *)lexer->current_token->text, 256, 1);
+      lexer->current_token->text = (char*)malloc(256);
+      int length = read_until_terminator(lexer, '"', (char*)lexer->current_token->text, 256, 1);
       if (length < 0) {
-        free((void *)lexer->current_token->text);
+        free((void*)lexer->current_token->text);
 
         lexer->current_token->type = TOKEN_ERROR;
         lexer->current_token->text = strdup("error reading string literal");
@@ -259,8 +259,8 @@ struct token *lex_peek_token(struct lex *lexer) {
 
       lexer->current_token = gc_new(GC_TYPE_TOKEN, sizeof(struct token));
       lexer->current_token->type = TOKEN_ATOM;
-      lexer->current_token->text = (char *)malloc(256);
-      int length = read_atom_string(lexer, (char *)lexer->current_token->text, 256);
+      lexer->current_token->text = (char*)malloc(256);
+      int length = read_atom_string(lexer, (char*)lexer->current_token->text, 256);
       if (length < 0) {
         lexer->current_token->type = TOKEN_ERROR;
         lexer->current_token->text = strdup("error reading atom");
@@ -281,20 +281,20 @@ struct token *lex_peek_token(struct lex *lexer) {
   return lexer->current_token;
 }
 
-void lex_gc_erase(struct lex *lexer) {
+void lex_gc_erase(struct lex* lexer) {
   lexer->current_token = NULL;
 }
 
-void lex_gc_erase_token(struct token *token) {
+void lex_gc_erase_token(struct token* token) {
   if (token->text) {
-    free((void *)token->text);
+    free((void*)token->text);
     token->text = NULL;
   }
   token->length = 0;
   token->type = TOKEN_EOF;
 }
 
-void lex_gc_mark(struct lex *lexer) {
+void lex_gc_mark(struct lex* lexer) {
   if (!lexer) {
     return;
   }

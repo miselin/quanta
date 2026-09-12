@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-void init_primitives(struct environment *env);
+void init_primitives(struct environment* env);
 
 #ifdef __cplusplus
 }  // extern "C"

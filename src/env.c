@@ -12,23 +12,23 @@
 #include "special.h"
 
 struct binding_cell {
-  struct atom *atom;
+  struct atom* atom;
 };
 
 struct environment {
-  GHashTable *bindings;        // char* -> struct binding_cell* bindings
-  struct environment *parent;  // for nested environments
+  GHashTable* bindings;        // char* -> struct binding_cell* bindings
+  struct environment* parent;  // for nested environments
 };
 
-struct environment *create_default_environment(void) {
-  struct environment *env = create_environment(NULL);
+struct environment* create_default_environment(void) {
+  struct environment* env = create_environment(NULL);
   init_primitives(env);
   init_special_forms(env);
   return env;
 }
 
-struct environment *create_environment(struct environment *parent) {
-  struct environment *env = gc_new(GC_TYPE_ENVIRONMENT, sizeof(struct environment));
+struct environment* create_environment(struct environment* parent) {
+  struct environment* env = gc_new(GC_TYPE_ENVIRONMENT, sizeof(struct environment));
 
   env->bindings = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
   env->parent = parent;
@@ -36,12 +36,12 @@ struct environment *create_environment(struct environment *parent) {
   return env;
 }
 
-struct environment *clone_environment(struct environment *env) {
+struct environment* clone_environment(struct environment* env) {
   if (!env) {
     return NULL;  // nothing to clone
   }
 
-  struct environment *new_env = create_environment(env->parent);
+  struct environment* new_env = create_environment(env->parent);
 
   // Copy bindings from the old environment
   GHashTableIter iter;
@@ -54,7 +54,7 @@ struct environment *clone_environment(struct environment *env) {
   return new_env;
 }
 
-void erase_environment(struct environment *env) {
+void erase_environment(struct environment* env) {
   if (!env) {
     return;
   }
@@ -62,9 +62,9 @@ void erase_environment(struct environment *env) {
   g_hash_table_destroy(env->bindings);
 }
 
-static struct binding_cell *env_lookup_cell(struct environment *env, struct atom *symbol) {
+static struct binding_cell* env_lookup_cell(struct environment* env, struct atom* symbol) {
   while (env) {
-    struct binding_cell *cell = g_hash_table_lookup(env->bindings, symbol->value.string.ptr);
+    struct binding_cell* cell = g_hash_table_lookup(env->bindings, symbol->value.string.ptr);
     if (cell) {
       return cell;
     }
@@ -74,18 +74,18 @@ static struct binding_cell *env_lookup_cell(struct environment *env, struct atom
   return NULL;
 }
 
-struct atom *env_lookup(struct environment *env, struct atom *symbol) {
-  struct binding_cell *cell = env_lookup_cell(env, symbol);
+struct atom* env_lookup(struct environment* env, struct atom* symbol) {
+  struct binding_cell* cell = env_lookup_cell(env, symbol);
   if (cell) {
     clog_debug(CLOG(LOGGER_ENV), "Found binding for symbol '%s' in env cell %p",
-               symbol->value.string.ptr, (void *)cell);
+               symbol->value.string.ptr, (void*)cell);
     return cell->atom;
   }
 
   return NULL;
 }
 
-struct atom *env_bind(struct environment *env, struct atom *symbol, struct atom *value) {
+struct atom* env_bind(struct environment* env, struct atom* symbol, struct atom* value) {
   if (!is_symbol(symbol)) {
     return new_atom_error(symbol, "Error: env_bind requires a symbol, got %s",
                           atom_type_to_string(symbol->type));
@@ -98,11 +98,11 @@ struct atom *env_bind(struct environment *env, struct atom *symbol, struct atom 
                           symbol->value.string.ptr);
   }
 
-  struct binding_cell *cell = gc_new(GC_TYPE_BINDING_CELL, sizeof(struct binding_cell));
+  struct binding_cell* cell = gc_new(GC_TYPE_BINDING_CELL, sizeof(struct binding_cell));
   cell->atom = value;
 
   clog_debug(CLOG(LOGGER_ENV), "Binding value for symbol '%s' in env cell %p",
-             symbol->value.string.ptr, (void *)cell);
+             symbol->value.string.ptr, (void*)cell);
 
   // key is an interned string, value is the real atom value
   // the binding should not outlive the atom
@@ -111,11 +111,11 @@ struct atom *env_bind(struct environment *env, struct atom *symbol, struct atom 
   return symbol;
 }
 
-struct atom *env_set(struct environment *env, struct atom *symbol, struct atom *value) {
-  struct binding_cell *cell = env_lookup_cell(env, symbol);
+struct atom* env_set(struct environment* env, struct atom* symbol, struct atom* value) {
+  struct binding_cell* cell = env_lookup_cell(env, symbol);
   if (cell) {
     clog_debug(CLOG(LOGGER_ENV), "Setting value for symbol '%s' in env cell %p",
-               symbol->value.string.ptr, (void *)cell);
+               symbol->value.string.ptr, (void*)cell);
     cell->atom = value;
     return symbol;
   }
@@ -127,7 +127,7 @@ struct atom *env_set(struct environment *env, struct atom *symbol, struct atom *
                         symbol->value.string.ptr);
 }
 
-void environment_gc_mark(struct environment *env) {
+void environment_gc_mark(struct environment* env) {
   if (!env) {
     return;  // nothing to mark
   }
@@ -141,7 +141,7 @@ void environment_gc_mark(struct environment *env) {
   gpointer key, value;
   g_hash_table_iter_init(&iter, env->bindings);
   while (g_hash_table_iter_next(&iter, &key, &value)) {
-    struct binding_cell *cell = (struct binding_cell *)value;
+    struct binding_cell* cell = (struct binding_cell*)value;
     if (gc_mark(cell)) {
       continue;
     }

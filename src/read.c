@@ -11,9 +11,9 @@
 #include "lex.h"
 #include "log.h"
 
-static struct atom *read_list(struct lex *lex);
+static struct atom* read_list(struct lex* lex);
 
-static void consume_whitespace(struct source_file *source) {
+static void consume_whitespace(struct source_file* source) {
   char c = source_file_getc(source);
   if (c == ';') {
     // skip comments
@@ -31,8 +31,8 @@ static void consume_whitespace(struct source_file *source) {
   }
 }
 
-static struct atom *read_atom_lex(struct lex *lex) {
-  struct token *token = lex_next_token(lex);
+static struct atom* read_atom_lex(struct lex* lex) {
+  struct token* token = lex_next_token(lex);
   if (!token) {
     return new_atom_error(NULL, "could not read token from source");
   } else if (token->type == TOKEN_ERROR) {
@@ -47,7 +47,7 @@ static struct atom *read_atom_lex(struct lex *lex) {
     case TOKEN_ATOM:
       if (isdigit(token->text[0]) || (token->text[0] == '-' && isdigit(token->text[1]))) {
         // probably an integer or float
-        char *endptr;
+        char* endptr;
         long int_value = strtol(token->text, &endptr, 10);
         if (*endptr == '\0') {
           // it's an integer
@@ -83,30 +83,30 @@ static struct atom *read_atom_lex(struct lex *lex) {
     case TOKEN_RPAREN:
       return new_atom_error(NULL, "unexpected right parenthesis");
     case TOKEN_QUOTE: {
-      struct atom *atom = read_atom_lex(lex);
+      struct atom* atom = read_atom_lex(lex);
       if (is_error(atom)) {
         return atom;
       }
 
-      struct atom *quote_atom = intern("quote", 0);
+      struct atom* quote_atom = intern("quote", 0);
       return new_cons(quote_atom, new_cons(atom, atom_nil()));
     } break;
     case TOKEN_BACKTICK: {
-      struct atom *atom = read_atom_lex(lex);
+      struct atom* atom = read_atom_lex(lex);
       if (is_error(atom)) {
         return atom;
       }
 
-      struct atom *quasiquote_atom = intern("quasiquote", 0);
+      struct atom* quasiquote_atom = intern("quasiquote", 0);
       return new_cons(quasiquote_atom, new_cons(atom, atom_nil()));
     } break;
     case TOKEN_COMMA: {
-      struct atom *atom = read_atom_lex(lex);
+      struct atom* atom = read_atom_lex(lex);
       if (is_error(atom)) {
         return atom;
       }
 
-      struct atom *unquote_atom = intern("unquote", 0);
+      struct atom* unquote_atom = intern("unquote", 0);
       return new_cons(unquote_atom, new_cons(atom, atom_nil()));
     } break;
     case TOKEN_DOT:
@@ -116,22 +116,22 @@ static struct atom *read_atom_lex(struct lex *lex) {
   return new_atom_error(NULL, "unknown token type: %d", token->type);
 }
 
-struct atom *read_atom(struct source_file *source) {
-  struct lex *lex = lex_new(source);
+struct atom* read_atom(struct source_file* source) {
+  struct lex* lex = lex_new(source);
 
   return read_atom_lex(lex);
 }
 
-static struct atom *read_list(struct lex *lex) {
+static struct atom* read_list(struct lex* lex) {
   // LPAREN already consumed before this call
 
-  struct atom *head = NULL;
-  struct atom *prev = NULL;
+  struct atom* head = NULL;
+  struct atom* prev = NULL;
 
   int dotted = 0;
 
   while (1) {
-    struct token *token = lex_peek_token(lex);
+    struct token* token = lex_peek_token(lex);
 
     if (token->type == TOKEN_RPAREN) {
       // consume it
@@ -149,7 +149,7 @@ static struct atom *read_list(struct lex *lex) {
     }
 
     // this will actually consume the token now
-    struct atom *atom = read_atom_lex(lex);
+    struct atom* atom = read_atom_lex(lex);
     if (is_error(atom)) {
       return atom;
     }
@@ -173,7 +173,7 @@ static struct atom *read_list(struct lex *lex) {
       break;
     }
 
-    struct atom *cons = new_cons(atom, NULL);
+    struct atom* cons = new_cons(atom, NULL);
 
     if (!head) {
       head = cons;  // first cons cell becomes the head of the list

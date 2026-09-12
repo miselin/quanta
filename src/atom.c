@@ -22,26 +22,26 @@ static struct atom g_atom_eof = {
     .value = {.ivalue = 2},
 };
 
-struct atom *atom_nil(void) {
+struct atom* atom_nil(void) {
   return &g_atom_nil;
 }
 
-struct atom *atom_true(void) {
+struct atom* atom_true(void) {
   return &g_atom_true;
 }
 
-struct atom *atom_eof(void) {
+struct atom* atom_eof(void) {
   return &g_atom_eof;
 }
 
-struct atom *new_atom(enum AtomType type, union atom_value value) {
-  struct atom *atom = gc_new(GC_TYPE_ATOM, sizeof(struct atom));
+struct atom* new_atom(enum AtomType type, union atom_value value) {
+  struct atom* atom = gc_new(GC_TYPE_ATOM, sizeof(struct atom));
   atom->type = type;
   atom->value = value;
   return atom;
 }
 
-struct atom *new_cons(struct atom *car, struct atom *cdr) {
+struct atom* new_cons(struct atom* car, struct atom* cdr) {
   // (nil . nil) is perfectly legal. Here we simply check for invaid internal usage.
   if (car == NULL && cdr == NULL) {
     return new_atom_error(NULL, "'cons' requires at least one of car or cdr to be non-null");
@@ -59,7 +59,7 @@ struct atom *new_cons(struct atom *car, struct atom *cdr) {
   return new_atom(ATOM_TYPE_CONS, value);
 }
 
-void erase_atom(struct atom *atom) {
+void erase_atom(struct atom* atom) {
   if (!atom) {
     return;
   }
@@ -78,7 +78,7 @@ void erase_atom(struct atom *atom) {
   }
 }
 
-struct atom *car(struct atom *atom) {
+struct atom* car(struct atom* atom) {
   if (is_error(atom)) {
     return atom;
   }
@@ -87,7 +87,7 @@ struct atom *car(struct atom *atom) {
     return new_atom_error(atom, "'car' requires a non-empty list");
   }
 
-  struct atom *result = atom->value.cons.car;
+  struct atom* result = atom->value.cons.car;
   if (!result) {
     return new_atom_error(atom, "'car' called on an empty list");
   }
@@ -95,7 +95,7 @@ struct atom *car(struct atom *atom) {
   return result;
 }
 
-struct atom *cdr(struct atom *atom) {
+struct atom* cdr(struct atom* atom) {
   if (is_error(atom)) {
     return atom;
   }
@@ -104,7 +104,7 @@ struct atom *cdr(struct atom *atom) {
     return new_atom_error(atom, "'cdr' requires a non-empty list");
   }
 
-  struct atom *result = atom->value.cons.cdr;
+  struct atom* result = atom->value.cons.cdr;
   if (!result) {
     return new_atom_error(atom, "'cdr' called on an empty list");
   }
@@ -112,66 +112,66 @@ struct atom *cdr(struct atom *atom) {
   return result;
 }
 
-int is_cons(struct atom *atom) {
+int is_cons(struct atom* atom) {
   return atom && atom->type == ATOM_TYPE_CONS;
 }
 
-int is_nil(struct atom *atom) {
+int is_nil(struct atom* atom) {
   return atom == &g_atom_nil;
 }
 
-int is_symbol(struct atom *atom) {
+int is_symbol(struct atom* atom) {
   return atom && atom->type == ATOM_TYPE_SYMBOL;
 }
 
-int is_keyword(struct atom *atom) {
+int is_keyword(struct atom* atom) {
   return atom && atom->type == ATOM_TYPE_KEYWORD;
 }
 
-int is_string(struct atom *atom) {
+int is_string(struct atom* atom) {
   return atom && atom->type == ATOM_TYPE_STRING;
 }
 
-int is_int(struct atom *atom) {
+int is_int(struct atom* atom) {
   return atom && atom->type == ATOM_TYPE_INT;
 }
 
-int is_float(struct atom *atom) {
+int is_float(struct atom* atom) {
   return atom && atom->type == ATOM_TYPE_FLOAT;
 }
 
-int is_true(struct atom *atom) {
+int is_true(struct atom* atom) {
   return atom == &g_atom_true;
 }
 
-int is_basic_type(struct atom *atom) {
+int is_basic_type(struct atom* atom) {
   return atom && (atom->type == ATOM_TYPE_INT || atom->type == ATOM_TYPE_FLOAT ||
                   atom->type == ATOM_TYPE_STRING || atom->type == ATOM_TYPE_NIL ||
                   atom->type == ATOM_TYPE_TRUE);
 }
 
-int is_error(struct atom *atom) {
+int is_error(struct atom* atom) {
   // EOF is a special case of error, so we include it here
   return atom && (atom->type == ATOM_TYPE_ERROR || atom->type == ATOM_TYPE_EOF);
 }
 
-int is_lambda(struct atom *atom) {
+int is_lambda(struct atom* atom) {
   return atom && atom->type == ATOM_TYPE_LAMBDA;
 }
 
-int is_primitive(struct atom *atom) {
+int is_primitive(struct atom* atom) {
   return atom && atom->type == ATOM_TYPE_PRIMITIVE;
 }
 
-int is_special(struct atom *atom) {
+int is_special(struct atom* atom) {
   return atom && atom->type == ATOM_TYPE_SPECIAL;
 }
 
-int is_eof(struct atom *atom) {
+int is_eof(struct atom* atom) {
   return atom && atom->type == ATOM_TYPE_EOF;
 }
 
-const char *atom_type_to_string(enum AtomType type) {
+const char* atom_type_to_string(enum AtomType type) {
   switch (type) {
     case ATOM_TYPE_NIL:
       return "NIL";
@@ -198,7 +198,7 @@ const char *atom_type_to_string(enum AtomType type) {
   }
 }
 
-void atom_mark(struct atom *atom) {
+void atom_mark(struct atom* atom) {
   if (!atom || atom == &g_atom_nil || atom == &g_atom_true || atom == &g_atom_eof) {
     return;
   }
@@ -225,20 +225,20 @@ void atom_mark(struct atom *atom) {
   }
 }
 
-struct atom *new_atom_error(struct atom *cause, const char *message, ...) {
-  struct atom *atom = gc_new(GC_TYPE_ATOM, sizeof(struct atom));
+struct atom* new_atom_error(struct atom* cause, const char* message, ...) {
+  struct atom* atom = gc_new(GC_TYPE_ATOM, sizeof(struct atom));
   atom->type = ATOM_TYPE_ERROR;
   atom->value.error.cause = cause;
 
   size_t bufsize = 256;
-  atom->value.error.message = (char *)malloc(256);
+  atom->value.error.message = (char*)malloc(256);
   if (message) {
     va_list args;
     va_start(args, message);
     int written = vsnprintf(atom->value.error.message, bufsize, message, args);
     while ((size_t)written >= bufsize) {
       bufsize = written + 1;
-      atom->value.error.message = (char *)realloc(atom->value.error.message, bufsize);
+      atom->value.error.message = (char*)realloc(atom->value.error.message, bufsize);
       va_start(args, message);
       written = vsnprintf(atom->value.error.message, bufsize, message, args);
     }

@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-struct atom *read_atom(struct source_file *source);
+struct atom* read_atom(struct source_file* source);
 
 #ifdef __cplusplus
 }  // extern "C"

@@ -25,31 +25,31 @@ enum AtomType {
 
 #define ATOM_LAMBDA_FLAG_MACRO (1 << 0)
 
-typedef struct atom *(*PrimitiveFunction)(struct atom *args, struct environment *env);
+typedef struct atom* (*PrimitiveFunction)(struct atom* args, struct environment* env);
 
 struct cons {
-  struct atom *car;
-  struct atom *cdr;
+  struct atom* car;
+  struct atom* cdr;
 };
 
 union atom_value {
   int64_t ivalue;
   double fvalue;
   struct {
-    char *ptr;
+    char* ptr;
     size_t len;
   } string;
   struct cons cons;
   PrimitiveFunction primitive;
   struct {
-    struct atom *args;
-    struct environment *env;
-    struct atom *body;
+    struct atom* args;
+    struct environment* env;
+    struct atom* body;
     int flags;
   } lambda;
   struct {
-    char *message;
-    struct atom *cause;
+    char* message;
+    struct atom* cause;
   } error;
 };
 
@@ -62,42 +62,42 @@ struct atom {
 extern "C" {
 #endif
 
-struct atom *atom_nil(void);
-struct atom *atom_true(void);
-struct atom *atom_eof(void);
+struct atom* atom_nil(void);
+struct atom* atom_true(void);
+struct atom* atom_eof(void);
 
-struct atom *new_atom(enum AtomType type, union atom_value value);
+struct atom* new_atom(enum AtomType type, union atom_value value);
 
 // Erase allocated memory inside an atom (e.g. strings)
 // Does not free other atoms (e.g. cons cells).
-void erase_atom(struct atom *atom);
+void erase_atom(struct atom* atom);
 
-struct atom *new_cons(struct atom *car, struct atom *cdr);
+struct atom* new_cons(struct atom* car, struct atom* cdr);
 
-struct atom *car(struct atom *atom);
-struct atom *cdr(struct atom *atom);
+struct atom* car(struct atom* atom);
+struct atom* cdr(struct atom* atom);
 
-int is_cons(struct atom *atom);
-int is_nil(struct atom *atom);
-int is_symbol(struct atom *atom);
-int is_keyword(struct atom *atom);
-int is_string(struct atom *atom);
-int is_int(struct atom *atom);
-int is_float(struct atom *atom);
-int is_true(struct atom *atom);
-int is_basic_type(struct atom *atom);
-int is_error(struct atom *atom);
-int is_lambda(struct atom *atom);
-int is_primitive(struct atom *atom);
-int is_special(struct atom *atom);
-int is_eof(struct atom *atom);
+int is_cons(struct atom* atom);
+int is_nil(struct atom* atom);
+int is_symbol(struct atom* atom);
+int is_keyword(struct atom* atom);
+int is_string(struct atom* atom);
+int is_int(struct atom* atom);
+int is_float(struct atom* atom);
+int is_true(struct atom* atom);
+int is_basic_type(struct atom* atom);
+int is_error(struct atom* atom);
+int is_lambda(struct atom* atom);
+int is_primitive(struct atom* atom);
+int is_special(struct atom* atom);
+int is_eof(struct atom* atom);
 
-const char *atom_type_to_string(enum AtomType type);
+const char* atom_type_to_string(enum AtomType type);
 
 // Exposed for GC
-void atom_mark(struct atom *atom);
+void atom_mark(struct atom* atom);
 
-struct atom *new_atom_error(struct atom *cause, const char *message, ...);
+struct atom* new_atom_error(struct atom* cause, const char* message, ...);
 
 #ifdef __cplusplus
 }  // extern "C"

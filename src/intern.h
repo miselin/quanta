@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-struct atom *intern(const char *name, int is_keyword);
+struct atom* intern(const char* name, int is_keyword);
 
 void init_intern_tables(void);
 void cleanup_intern_tables(void);

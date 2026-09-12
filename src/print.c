@@ -4,7 +4,7 @@
 
 #include "atom.h"
 
-static int print_list(char *buffer, size_t buffer_size, struct atom *atom, int readably) {
+static int print_list(char* buffer, size_t buffer_size, struct atom* atom, int readably) {
   if (!is_cons(atom)) {
     return print_str(buffer, buffer_size, atom, readably);
   }
@@ -30,8 +30,8 @@ static int print_list(char *buffer, size_t buffer_size, struct atom *atom, int r
   return (int)offset;
 }
 
-void print(FILE *fp, struct atom *atom, int readably) {
-  char *buffer = malloc(1024);
+void print(FILE* fp, struct atom* atom, int readably) {
+  char* buffer = malloc(1024);
   print_str(buffer, 1024, atom, readably);
 
   fputs(buffer, fp);
@@ -40,12 +40,12 @@ void print(FILE *fp, struct atom *atom, int readably) {
   fflush(fp);
 }
 
-const char *escape_string(const char *str, size_t len) {
+const char* escape_string(const char* str, size_t len) {
   if (!str || len == 0) {
     return "\"\"";
   }
 
-  char *escaped = malloc(len * 2 + 3);  // worst case: every char is escaped
+  char* escaped = malloc(len * 2 + 3);  // worst case: every char is escaped
   size_t j = 0;
 
   escaped[j++] = '"';
@@ -79,7 +79,7 @@ const char *escape_string(const char *str, size_t len) {
   return escaped;
 }
 
-int print_str(char *buffer, size_t buffer_size, struct atom *atom, int readably) {
+int print_str(char* buffer, size_t buffer_size, struct atom* atom, int readably) {
   if (!atom) {
     return snprintf(buffer, buffer_size, "nil");
   }
@@ -93,10 +93,10 @@ int print_str(char *buffer, size_t buffer_size, struct atom *atom, int readably)
       break;
     case ATOM_TYPE_STRING:
       if (!readably) {
-        const char *escaped = escape_string(atom->value.string.ptr, atom->value.string.len);
+        const char* escaped = escape_string(atom->value.string.ptr, atom->value.string.len);
         strncpy(buffer, escaped, buffer_size);
         int result = strlen(escaped);
-        free((void *)escaped);
+        free((void*)escaped);
         return result;
       }
 

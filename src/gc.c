@@ -14,24 +14,24 @@ struct gcnode {
   enum GCType type;
   size_t size;
   int marked;
-  struct gcnode *next;
+  struct gcnode* next;
 } __attribute__((aligned(8)));
 
 struct gcroot {
-  struct gcnode *node;
-  struct gcroot *next;
+  struct gcnode* node;
+  struct gcroot* next;
 };
 
-static struct gcnode *gc_head = NULL;
-static struct gcnode *gc_tail = NULL;
+static struct gcnode* gc_head = NULL;
+static struct gcnode* gc_tail = NULL;
 
-static struct gcroot *roots = NULL;
+static struct gcroot* roots = NULL;
 
-static struct gcnode *gc_node(void *ptr) {
-  return (struct gcnode *)ptr - 1;
+static struct gcnode* gc_node(void* ptr) {
+  return (struct gcnode*)ptr - 1;
 }
 
-static const char *gc_type_to_str(enum GCType type) {
+static const char* gc_type_to_str(enum GCType type) {
   switch (type) {
     case GC_TYPE_TOKEN:
       return "token";
@@ -48,8 +48,8 @@ static const char *gc_type_to_str(enum GCType type) {
   return "unknown";
 }
 
-void *gc_new(enum GCType type, size_t size) {
-  struct gcnode *node = malloc(sizeof(struct gcnode) + size);
+void* gc_new(enum GCType type, size_t size) {
+  struct gcnode* node = malloc(sizeof(struct gcnode) + size);
   if (!node) {
     fprintf(stderr, "Error: could not allocate memory for GC node\n");
     return NULL;
@@ -68,30 +68,30 @@ void *gc_new(enum GCType type, size_t size) {
     gc_tail = node;
   }
 
-  return (void *)(node + 1);  // Return pointer to the memory after the gcnode
+  return (void*)(node + 1);  // Return pointer to the memory after the gcnode
 }
 
-void gc_retain(void *ptr) {
-  struct gcnode *node = gc_node(ptr);
+void gc_retain(void* ptr) {
+  struct gcnode* node = gc_node(ptr);
 
-  clog_debug(CLOG(LOGGER_GC), "GC: retaining %p (actual %p) of type %s", (void *)node,
-             (void *)(node + 1), gc_type_to_str(node->type));
+  clog_debug(CLOG(LOGGER_GC), "GC: retaining %p (actual %p) of type %s", (void*)node,
+             (void*)(node + 1), gc_type_to_str(node->type));
 
-  struct gcroot *new_root = malloc(sizeof(struct gcroot));
+  struct gcroot* new_root = malloc(sizeof(struct gcroot));
   new_root->node = node;
   new_root->next = roots;
   roots = new_root;
 }
 
-void gc_release(void *ptr) {
-  struct gcnode *node = gc_node(ptr);
+void gc_release(void* ptr) {
+  struct gcnode* node = gc_node(ptr);
 
-  clog_debug(CLOG(LOGGER_GC), "GC: removing root %p (actual %p) of type %s", (void *)node,
-             (void *)(node + 1), gc_type_to_str(node->type));
+  clog_debug(CLOG(LOGGER_GC), "GC: removing root %p (actual %p) of type %s", (void*)node,
+             (void*)(node + 1), gc_type_to_str(node->type));
 
   // Find and remove the root
-  struct gcroot *curr = roots;
-  struct gcroot *prev = NULL;
+  struct gcroot* curr = roots;
+  struct gcroot* prev = NULL;
   while (curr) {
     if (curr->node == node) {
       if (prev) {
@@ -110,12 +110,12 @@ void gc_release(void *ptr) {
   fprintf(stderr, "Warning: gc_release called on a pointer not retained by GC\n");
 }
 
-int gc_mark(void *ptr) {
+int gc_mark(void* ptr) {
   if (!ptr) {
     return 0;
   }
 
-  struct gcnode *node = gc_node(ptr);
+  struct gcnode* node = gc_node(ptr);
   int marked = node->marked;
   node->marked = 1;
   return marked;
@@ -128,18 +128,18 @@ void gc_init(void) {
 
 size_t gc_run(void) {
   // Mark phase
-  for (struct gcroot *root = roots; root; root = root->next) {
-    struct gcnode *node = root->node;
+  for (struct gcroot* root = roots; root; root = root->next) {
+    struct gcnode* node = root->node;
     if (node) {
       switch (node->type) {
         case GC_TYPE_ATOM: {
-          struct atom *atom = (struct atom *)(node + 1);
+          struct atom* atom = (struct atom*)(node + 1);
 
           // mark atom and its reachable parts
           atom_mark(atom);
         } break;
         case GC_TYPE_ENVIRONMENT: {
-          struct environment *env = (struct environment *)(node + 1);
+          struct environment* env = (struct environment*)(node + 1);
 
           environment_gc_mark(env);
         } break;
@@ -151,7 +151,7 @@ size_t gc_run(void) {
           node->marked = 1;
         } break;
         case GC_TYPE_LEXER: {
-          struct lex *lexer = (struct lex *)(node + 1);
+          struct lex* lexer = (struct lex*)(node + 1);
           lex_gc_mark(lexer);
         } break;
       }
@@ -168,8 +168,8 @@ size_t gc_run(void) {
   size_t remaining_bytes = 0;
 
   // Sweep phase
-  struct gcnode *node = gc_head;
-  struct gcnode *prev = NULL;
+  struct gcnode* node = gc_head;
+  struct gcnode* prev = NULL;
   while (node) {
     int marked = node->marked;
     node->marked = 0;
@@ -203,28 +203,28 @@ size_t gc_run(void) {
     // Erase primitives inside the data type
     switch (node->type) {
       case GC_TYPE_ATOM: {
-        struct atom *atom = (struct atom *)(node + 1);
+        struct atom* atom = (struct atom*)(node + 1);
         erase_atom(atom);
       } break;
       case GC_TYPE_ENVIRONMENT: {
-        struct environment *env = (struct environment *)(node + 1);
+        struct environment* env = (struct environment*)(node + 1);
         erase_environment(env);
       } break;
       case GC_TYPE_BINDING_CELL: {
         // Nothing within a binding cell needs to be erased.
       } break;
       case GC_TYPE_TOKEN: {
-        lex_gc_erase_token((struct token *)(node + 1));
+        lex_gc_erase_token((struct token*)(node + 1));
       } break;
       case GC_TYPE_LEXER: {
-        lex_gc_erase((struct lex *)(node + 1));
+        lex_gc_erase((struct lex*)(node + 1));
       } break;
     }
 
-    struct gcnode *next = node->next;
+    struct gcnode* next = node->next;
 
-    clog_debug(CLOG(LOGGER_GC), "GC: collected %p (actual %p) of type %s", (void *)node,
-               (void *)(node + 1), gc_type_to_str(node->type));
+    clog_debug(CLOG(LOGGER_GC), "GC: collected %p (actual %p) of type %s", (void*)node,
+               (void*)(node + 1), gc_type_to_str(node->type));
     free(node);
 
     node = next;
@@ -244,9 +244,9 @@ void gc_shutdown(void) {
     fprintf(stderr, "Warning: GC shutdown called with uncollected nodes\n");
   }
 
-  struct gcnode *current = gc_head;
+  struct gcnode* current = gc_head;
   while (current) {
-    struct gcnode *next = current->next;
+    struct gcnode* next = current->next;
     free(current);
     current = next;
   }

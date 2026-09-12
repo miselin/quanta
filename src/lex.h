@@ -28,7 +28,7 @@ enum Token {
 
 struct token {
   enum Token type;
-  const char *text;
+  const char* text;
   size_t length;
 };
 
@@ -38,18 +38,18 @@ struct lex;
 extern "C" {
 #endif
 
-struct lex *lex_new(struct source_file *source);
+struct lex* lex_new(struct source_file* source);
 
 // Consumes the next token in the token stream
 // Returns the same as lex_peek_token if it was previously called, but advances the lexer
-struct token *lex_next_token(struct lex *lexer);
+struct token* lex_next_token(struct lex* lexer);
 
 // Peeks the next token in the token stream
-struct token *lex_peek_token(struct lex *lexer);
+struct token* lex_peek_token(struct lex* lexer);
 
-void lex_gc_erase(struct lex *lexer);
-void lex_gc_erase_token(struct token *token);
-void lex_gc_mark(struct lex *lexer);
+void lex_gc_erase(struct lex* lexer);
+void lex_gc_erase_token(struct token* token);
+void lex_gc_mark(struct lex* lexer);
 
 #ifdef __cplusplus
 }  // extern "C"

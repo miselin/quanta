@@ -15,13 +15,13 @@ enum GCType {
 extern "C" {
 #endif
 
-void *gc_new(enum GCType type, size_t size);
+void* gc_new(enum GCType type, size_t size);
 
-void gc_retain(void *ptr);
-void gc_release(void *ptr);
+void gc_retain(void* ptr);
+void gc_release(void* ptr);
 
 // Returns 1 if the pointer was already marked, 0 otherwise.
-int gc_mark(void *ptr);
+int gc_mark(void* ptr);
 
 void gc_init(void);
 // Run a full garbage collection cycle. Returns the numbe of bytes collected.
