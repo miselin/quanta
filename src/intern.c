@@ -63,4 +63,10 @@ void intern_gc_mark(void) {
     struct atom* atom = (struct atom*)value;
     gc_mark(atom);
   }
+
+  g_hash_table_iter_init(&iter, keyword_table);
+  while (g_hash_table_iter_next(&iter, &key, &value)) {
+    struct atom* atom = (struct atom*)value;
+    gc_mark(atom);
+  }
 }
